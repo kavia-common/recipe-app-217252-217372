@@ -1,10 +1,12 @@
-import React, { useContext } from "react";
+import React, { useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { getApiBase } from "../api/client";
 import "./header.css";
 
 export default function Header() {
   const { isAuthenticated, user, role, logout, health } = useContext(AuthContext);
+  const apiBase = useMemo(() => getApiBase(), []);
 
   return (
     <header className="site-header" role="banner">
@@ -18,7 +20,11 @@ export default function Header() {
           )}
         </div>
         <div className="nav-right">
-          <span className={`health ${health === "ok" ? "ok" : "bad"}`} aria-live="polite" title="API health">
+          <span
+            className={`health ${health === "ok" ? "ok" : "bad"}`}
+            aria-live="polite"
+            title={`API health • Base: ${apiBase}`}
+          >
             {health === "ok" ? "API: Healthy" : "API: Unavailable"}
           </span>
           {isAuthenticated ? (

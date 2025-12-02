@@ -7,18 +7,42 @@
 
 // PUBLIC_INTERFACE
 export function getApiBase() {
-  /** Returns the API base URL from environment variables with a sensible default. */
-  const envBase =
+  /** Returns the API base URL from environment variables with a sensible default.
+   * Behavior:
+   * - If REACT_APP_API_BASE or REACT_APP_BACKEND_URL is set:
+   *    - If it's a full origin (e.g., https://host) with no path, append '/api'
+   *    - If it's already a path (e.g., '/api' or 'api/v1'), normalize to start with '/'
+   *    - Always trim trailing slashes
+   * - Otherwise, fallback to same-origin '/api' (or relative '/api' if window is not available)
+   */
+  const rawEnv =
     process.env.REACT_APP_API_BASE ||
     process.env.REACT_APP_BACKEND_URL ||
     "";
 
-  if (envBase) {
-    return envBase;
+  if (rawEnv) {
+    // If looks like a URL with protocol
+    try {
+      const url = new URL(rawEnv);
+      // If pathname is '' or '/', tack on '/api' by default
+      let pathname = url.pathname || "/";
+      if (pathname === "/") {
+        pathname = "/api";
+      }
+      // Special: vscode-internal preview hosts often expose backend under '/api'
+      // so ensure a path exists
+      const normalized = `${url.origin}${pathname}`.replace(/\/+$/, "");
+      return normalized;
+    } catch {
+      // Not a full URL. Treat as relative base.
+      let base = rawEnv.trim();
+      if (!base.startsWith("/")) base = `/${base}`;
+      base = base.replace(/\/+$/, "");
+      return base || "/api";
+    }
   }
 
   // Fallback to same-origin + /api when no env variables are provided.
-  // Guard for test environments where window may be undefined.
   try {
     if (typeof window !== "undefined" && window.location?.origin) {
       return `${window.location.origin}/api`;
