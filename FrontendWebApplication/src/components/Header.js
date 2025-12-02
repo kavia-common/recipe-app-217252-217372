@@ -15,6 +15,7 @@ export default function Header() {
           <Link to="/" className="brand" aria-label="Recipe App Home">🍳 RecipeApp</Link>
           <Link to="/recipes" className="nav-link">Browse</Link>
           <Link to="/feedback" className="nav-link">Feedback</Link>
+          <Link to="/diagnostics" className="nav-link" title="API diagnostics">Diagnostics</Link>
           {role === "admin" && (
             <Link to="/admin" className="nav-link">Admin</Link>
           )}
@@ -23,9 +24,12 @@ export default function Header() {
           <span
             className={`health ${health === "ok" ? "ok" : "bad"}`}
             aria-live="polite"
-            title={`API health • Base: ${apiBase}`}
+            title={`API base: ${apiBase}`}
           >
             {health === "ok" ? "API: Healthy" : "API: Unavailable"}
+          </span>
+          <span className="nav-link" aria-label="Resolved API base" style={{ opacity: 0.8 }}>
+            {apiBase}
           </span>
           {isAuthenticated ? (
             <>

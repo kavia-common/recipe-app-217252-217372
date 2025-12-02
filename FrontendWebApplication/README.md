@@ -20,9 +20,10 @@ Set one of the following (already supported by container env):
 - `REACT_APP_API_BASE` (preferred)
 - `REACT_APP_BACKEND_URL`
 
-If neither is set, the app uses `/api` as the default base.
+If neither is set, the app uses same-origin + `/api` as the default base.
 
-You may also set (optional):
+Optional:
+- `REACT_APP_API_VERSIONED_PATH` to force a versioned path (e.g., `/api/v1`) regardless of the origin provided in the base.
 - `REACT_APP_HEALTHCHECK_PATH` (not required; health check uses `/health` on the API base)
 
 Create a `.env` in the app root if needed (do not commit secrets):
@@ -51,6 +52,7 @@ Open http://localhost:3000.
 - `/profile` Profile (protected)
 - `/feedback` Feedback (protected)
 - `/admin` Admin landing (links/controls are guarded and also shown contextually)
+- `/diagnostics` Runtime diagnostics for API base and key endpoints
 
 ## Notes
 

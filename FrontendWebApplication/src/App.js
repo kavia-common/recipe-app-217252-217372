@@ -12,6 +12,7 @@ import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Diagnostics from "./pages/Diagnostics";
 
 // PUBLIC_INTERFACE
 function App() {
@@ -63,6 +64,7 @@ function App() {
               }
             />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/diagnostics" element={<Diagnostics />} />
             <Route path="*" element={<main style={{ padding: 16 }}><h1>404</h1><p>Page not found</p></main>} />
           </Routes>
         </Router>

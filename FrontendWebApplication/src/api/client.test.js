@@ -36,6 +36,20 @@ describe("getApiBase", () => {
     expect(getApiBase()).toBe("https://api.example.com/api/v1");
   });
 
+  test("forces versioned path when REACT_APP_API_VERSIONED_PATH is set (origin-only)", () => {
+    process.env.REACT_APP_API_BASE = "https://example.com";
+    process.env.REACT_APP_API_VERSIONED_PATH = "/api/v1";
+    expect(getApiBase()).toBe("https://example.com/api/v1");
+    delete process.env.REACT_APP_API_VERSIONED_PATH;
+  });
+
+  test("forces versioned path when REACT_APP_API_VERSIONED_PATH is set (relative input)", () => {
+    process.env.REACT_APP_API_BASE = "/api";
+    process.env.REACT_APP_API_VERSIONED_PATH = "/api/v1";
+    expect(getApiBase()).toBe("/api/v1");
+    delete process.env.REACT_APP_API_VERSIONED_PATH;
+  });
+
   test("handles vscode-internal hosts by ensuring path", () => {
     process.env.REACT_APP_API_BASE = "https://vscode-internal-29792-beta.beta01.cloud.kavia.ai:5000";
     expect(getApiBase()).toBe("https://vscode-internal-29792-beta.beta01.cloud.kavia.ai:5000/api");

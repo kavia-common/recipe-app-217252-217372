@@ -5,54 +5,68 @@
 // Provides resilient base URL resolution and clearer network error messages.
 //
 
+/**
+ * Normalize a base URL string:
+ * - trims trailing slashes
+ * - ensures a path exists when origin-only URL is provided
+ * - optionally overrides/forces a versioned path (e.g. /api/v1)
+ */
+function normalizeBase(raw, forceVersionedPath = "") {
+  try {
+    const url = new URL(raw);
+    let pathname = url.pathname || "/";
+    // If force path provided, use it; else default /api when naked origin
+    if (forceVersionedPath) {
+      pathname = forceVersionedPath;
+    } else if (pathname === "/") {
+      pathname = "/api";
+    }
+    return `${url.origin}${pathname}`.replace(/\/+$/, "");
+  } catch {
+    // relative path like "/api" or "api/v1"
+    let base = (raw || "").trim();
+    if (!base) return "/api";
+    if (!base.startsWith("/")) base = `/${base}`;
+    // Apply force path if requested
+    if (forceVersionedPath) base = forceVersionedPath.startsWith("/") ? forceVersionedPath : `/${forceVersionedPath}`;
+    return base.replace(/\/+$/, "");
+  }
+}
+
 // PUBLIC_INTERFACE
 export function getApiBase() {
-  /** Returns the API base URL from environment variables with a sensible default.
-   * Behavior:
-   * - If REACT_APP_API_BASE or REACT_APP_BACKEND_URL is set:
-   *    - If it's a full origin (e.g., https://host) with no path, append '/api'
-   *    - If it's already a path (e.g., '/api' or 'api/v1'), normalize to start with '/'
-   *    - Always trim trailing slashes
-   * - Otherwise, fallback to same-origin '/api' (or relative '/api' if window is not available)
+  /**
+   * Resolve API base from env with precedence and optional version override.
+   * Precedence:
+   * 1) REACT_APP_API_BASE
+   * 2) REACT_APP_BACKEND_URL
+   * 3) same-origin + '/api'
+   * If REACT_APP_API_VERSIONED_PATH is set (e.g., '/api/v1'), enforce it.
    */
-  const rawEnv =
+  const forceVersionedPath =
+    (process.env.REACT_APP_API_VERSIONED_PATH || "").trim();
+
+  const candidate =
     process.env.REACT_APP_API_BASE ||
     process.env.REACT_APP_BACKEND_URL ||
     "";
 
-  if (rawEnv) {
-    // If looks like a URL with protocol
-    try {
-      const url = new URL(rawEnv);
-      // If pathname is '' or '/', tack on '/api' by default
-      let pathname = url.pathname || "/";
-      if (pathname === "/") {
-        pathname = "/api";
-      }
-      // Special: vscode-internal preview hosts often expose backend under '/api'
-      // so ensure a path exists
-      const normalized = `${url.origin}${pathname}`.replace(/\/+$/, "");
-      return normalized;
-    } catch {
-      // Not a full URL. Treat as relative base.
-      let base = rawEnv.trim();
-      if (!base.startsWith("/")) base = `/${base}`;
-      base = base.replace(/\/+$/, "");
-      return base || "/api";
-    }
+  if (candidate) {
+    return normalizeBase(candidate, forceVersionedPath);
   }
 
   // Fallback to same-origin + /api when no env variables are provided.
   try {
     if (typeof window !== "undefined" && window.location?.origin) {
-      return `${window.location.origin}/api`;
+      const fallback = `${window.location.origin}/api`;
+      return normalizeBase(fallback, forceVersionedPath);
     }
   } catch {
     // ignore
   }
 
-  // Last resort: relative /api (older behavior)
-  return "/api";
+  // Last resort: relative /api
+  return normalizeBase("/api", forceVersionedPath);
 }
 
 let inMemoryToken = null;
