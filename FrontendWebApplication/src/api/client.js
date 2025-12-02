@@ -293,19 +293,31 @@ export const Api = {
     if (mockFlag()) return MockApi.createRecipe(recipe);
     return apiFetch("/recipes", { method: "POST", body: recipe, auth: true });
   },
-  updateRecipe: (id, recipe) => {
+  /**
+   * PUBLIC_INTERFACE
+   * Update a recipe (admin-only on live backend). Returns updated recipe.
+   */
+  updateRecipe: (id, recipe, options = {}) => {
     if (mockFlag()) return MockApi.updateRecipe(id, recipe);
+    const { signal } = options || {};
     return apiFetch(`/recipes/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: recipe,
       auth: true,
+      signal,
     });
   },
-  deleteRecipe: (id) => {
+  /**
+   * PUBLIC_INTERFACE
+   * Delete a recipe (admin-only on live backend). Returns status payload or empty on 204.
+   */
+  deleteRecipe: (id, options = {}) => {
     if (mockFlag()) return MockApi.deleteRecipe(id);
+    const { signal } = options || {};
     return apiFetch(`/recipes/${encodeURIComponent(id)}`, {
       method: "DELETE",
       auth: true,
+      signal,
     });
   },
 

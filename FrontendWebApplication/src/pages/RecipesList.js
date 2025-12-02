@@ -71,9 +71,29 @@ export default function RecipesList() {
     navigate(`/recipes/${encodeURIComponent(r.id)}`);
   }
 
+  // Banner if navigated from delete
+  const [banner, setBanner] = useState("");
+  useEffect(() => {
+    // check navigation state for toast
+    try {
+      if (window.history?.state?.usr?.toast) {
+        setBanner(String(window.history.state.usr.toast));
+        // clear it so it doesn't persist between navigations
+        window.history.replaceState({}, "");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   return (
     <main className="container" role="main">
       <h1 style={{ padding: "16px" }}>Browse Recipes</h1>
+      {banner && (
+        <div role="status" style={{ padding: 12, background: "#d1fae5", color: "#065f46", borderRadius: 8, margin: "0 16px 8px" }}>
+          {banner}
+        </div>
+      )}
       <Filters value={params} onChange={setParams} />
       {loading && <Loading label="Loading recipes..." />}
       {err && <ErrorMessage error={err} />}

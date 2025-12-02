@@ -143,12 +143,27 @@ Open http://localhost:3000.
 - `/admin` Admin landing (links/controls are guarded and also shown contextually)
 - `/diagnostics` Runtime diagnostics for API base and key endpoints
 
+## Admin: Edit and Delete Recipes
+
+Admin users see additional controls:
+- On Recipe Detail: "Edit" and "Delete" buttons near the title.
+- On Recipe cards: a small Edit/Delete control group appears for admins.
+- Route: `/recipes/:id/edit` provides a full edit form (title, description, ingredients list editor, steps list editor, imageUrl, category, difficulty, cuisine, prepTime, cookTime, isFeatured). The form uses accessible labels and client-side validation.
+
+Behavior:
+- After a successful update, you are redirected to the recipe detail and shown a success banner.
+- Deleting a recipe asks for confirmation; on success it navigates back to `/recipes` with a banner.
+
+Mock Mode vs Live Backend:
+- Live Backend: Uses `PUT /recipes/{id}` and `DELETE /recipes/{id}` with a bearer JWT (admin only).
+- Mock Mode: Updates and deletes are persisted locally in `localStorage` under `mock_recipes_dataset`, so changes survive reloads.
+
 ## Notes
 
 - JWT is stored in memory and persisted to localStorage as `auth_token`.
 - Authorization is attached automatically via `Authorization: Bearer <token>`.
 - If the backend is unavailable, the app handles errors gracefully and shows health status in the header.
-- In mock mode, requests are served from in-app mocks and no network is used.
+- In mock mode, requests are served from in-app mocks and no network is used. Admin edits/deletes are persisted locally.
 =======
 ## Favorites
 

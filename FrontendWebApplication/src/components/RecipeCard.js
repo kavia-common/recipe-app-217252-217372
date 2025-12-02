@@ -42,7 +42,7 @@ export default function RecipeCard({ recipe, onClick }) {
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
 
-  const { isAuthenticated, isFavorite, toggleFavorite } = useContext(AuthContext);
+  const { isAuthenticated, isFavorite, toggleFavorite, role } = useContext(AuthContext);
   const favored = isAuthenticated ? isFavorite(id) : false;
   const onFavClick = (e) => {
     e.stopPropagation();
@@ -105,6 +105,46 @@ export default function RecipeCard({ recipe, onClick }) {
           >
             {favored ? "❤️" : "🤍"}
           </button>
+        )}
+        {role === "admin" && (
+          <div
+            style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 6 }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <a
+              href={`/recipes/${encodeURIComponent(id)}/edit`}
+              className="btn btn-secondary"
+              aria-label={`Edit ${title}`}
+              title="Edit"
+              onClick={(e) => e.stopPropagation()}
+              style={{ padding: "4px 6px", fontSize: "0.8rem" }}
+            >
+              Edit
+            </a>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              aria-label={`Delete ${title}`}
+              title="Delete"
+              onClick={async (e) => {
+                e.stopPropagation();
+                // We cannot import Api here to avoid circular weight; but we can lazy import
+                const mod = await import("../api/client");
+                if (!window.confirm(`Delete recipe "${title}"?`)) return;
+                try {
+                  await mod.Api.deleteRecipe(id);
+                  // naive refresh: reload current page so list re-fetches
+                  window.location.reload();
+                } catch (err) {
+                  alert(err?.message || "Failed to delete");
+                }
+              }}
+              style={{ padding: "4px 6px", fontSize: "0.8rem" }}
+            >
+              Delete
+            </button>
+          </div>
         )}
       </div>
       <div className="recipe-content">

@@ -3,7 +3,7 @@
 // Mock API implementation for no-backend preview mode.
 // This module mirrors src/api/client.js Api surface where required by the UI.
 //
-import { getMockRecipeById, getMockRecipes, mockCategories } from "./data";
+import { getMockRecipeById, getMockRecipes, mockCategories, getAllMockRecipes } from "./data";
 
 // Simulate latency to better reflect UX without network
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -12,6 +12,32 @@ const maybeDelay = async () => {
   const ms = 80 + Math.round(rand * 220);
   await delay(ms);
 };
+
+const RECIPES_KEY = "mock_recipes_dataset";
+
+function readRecipes() {
+  try {
+    const raw = localStorage.getItem(RECIPES_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0) return arr;
+    }
+  } catch {
+    // ignore
+  }
+  // Bootstrap from static dataset on first use
+  const seed = getAllMockRecipes();
+  writeRecipes(seed);
+  return seed;
+}
+
+function writeRecipes(arr) {
+  try {
+    localStorage.setItem(RECIPES_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
+  } catch {
+    // ignore
+  }
+}
 
 // PUBLIC_INTERFACE
 export const MockApi = {
@@ -89,16 +115,41 @@ export const MockApi = {
     return mockCategories;
   },
 
-  /** Recipes */
+  /** Recipes (with localStorage persistence) */
   listRecipes: async (params = {}) => {
     await maybeDelay();
-    // Support optional pagination: page, pageSize; and filters: q, category, cuisine, difficulty, sort
-    const { page, pageSize, q = "", ...filters } = params || {};
+    const dataset = readRecipes();
+    // Apply filters and sorts similarly to getMockRecipes but using current dataset
+    const { page, pageSize, q = "", category = "", cuisine = "", difficulty = "", sort = "" } = params || {};
 
-    // Start with full set, apply non-q filters/sort via getMockRecipes for consistency
-    let base = getMockRecipes({ ...filters });
+    let base = [...dataset];
 
-    // Apply 'q' if present: match title, description, ingredients, category (case-insensitive)
+    // Apply filters
+    if (category) {
+      base = base.filter((r) => (r.category || "").toLowerCase() === String(category).toLowerCase());
+    }
+    if (cuisine) {
+      base = base.filter((r) => (r.cuisine || "").toLowerCase().includes(String(cuisine).toLowerCase()));
+    }
+    if (difficulty) {
+      base = base.filter((r) => (r.difficulty || "").toLowerCase() === String(difficulty).toLowerCase());
+    }
+
+    // Sorts
+    if (sort === "featured") {
+      base = base.filter((r) => !!r.isFeatured);
+      base.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    } else if (sort === "trending") {
+      base.sort((a, b) => {
+        const s = (b.trendingScore || 0) - (a.trendingScore || 0);
+        if (s !== 0) return s;
+        return (b.createdAt || "").localeCompare(a.createdAt || "");
+      });
+    } else if (sort === "newest") {
+      base.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    }
+
+    // Search q
     const query = String(q || "").trim().toLowerCase();
     if (query) {
       base = base.filter((r) => {
@@ -115,8 +166,7 @@ export const MockApi = {
       });
     }
 
-    // Keep sort effect already applied by getMockRecipes
-    // Apply pagination last (if present)
+    // Pagination
     let out = base;
     if (page != null && pageSize != null && Number(page) > 0 && Number(pageSize) > 0) {
       const p = Number(page);
@@ -129,7 +179,8 @@ export const MockApi = {
   },
   getRecipe: async (id) => {
     await maybeDelay();
-    const r = getMockRecipeById(id);
+    const ds = readRecipes();
+    const r = ds.find((x) => String(x.id) === String(id));
     if (!r) {
       const e = new Error("Recipe not found");
       e.status = 404;
@@ -139,15 +190,37 @@ export const MockApi = {
   },
   createRecipe: async (recipe) => {
     await maybeDelay();
-    // Not persisted; just echo success with id
-    return { ...recipe, id: `r-${Math.floor(Math.random() * 10000)}` };
+    const ds = readRecipes();
+    const newId = `r-${Date.now()}`;
+    const next = { ...recipe, id: newId, createdAt: new Date().toISOString() };
+    writeRecipes([next, ...ds]);
+    return next;
   },
   updateRecipe: async (id, recipe) => {
     await maybeDelay();
-    return { ...recipe, id };
+    const ds = readRecipes();
+    const idx = ds.findIndex((x) => String(x.id) === String(id));
+    if (idx === -1) {
+      const e = new Error("Recipe not found");
+      e.status = 404;
+      throw e;
+    }
+    const updated = { ...ds[idx], ...recipe, id: String(id) };
+    const next = [...ds];
+    next[idx] = updated;
+    writeRecipes(next);
+    return updated;
   },
-  deleteRecipe: async (_id) => {
+  deleteRecipe: async (id) => {
     await maybeDelay();
+    const ds = readRecipes();
+    const next = ds.filter((x) => String(x.id) !== String(id));
+    if (next.length === ds.length) {
+      const e = new Error("Recipe not found");
+      e.status = 404;
+      throw e;
+    }
+    writeRecipes(next);
     return { ok: true };
   },
 

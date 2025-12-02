@@ -12,8 +12,10 @@ import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import AdminRoute from "./routes/AdminRoute";
 import Diagnostics from "./pages/Diagnostics";
 import Favorites from "./pages/Favorites";
+import EditRecipe from "./pages/EditRecipe";
 
 // PUBLIC_INTERFACE
 function App() {
@@ -74,6 +76,14 @@ function App() {
             />
             <Route path="/admin" element={<Admin />} />
             <Route path="/diagnostics" element={<Diagnostics />} />
+            <Route
+              path="/recipes/:id/edit"
+              element={
+                <AdminRoute>
+                  <EditRecipe />
+                </AdminRoute>
+              }
+            />
             <Route
               path="*"
               element={

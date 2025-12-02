@@ -52,6 +52,27 @@ export default function RecipeDetail() {
     };
   }, [id]);
 
+  // Show success banner if returned from edit
+  const [banner, setBanner] = useState("");
+  useEffect(() => {
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      if (qs.get("updated") === "1") {
+        setBanner("Recipe updated successfully.");
+        // remove the query param to avoid persistent banner
+        qs.delete("updated");
+        const path = window.location.pathname + (qs.toString() ? `?${qs.toString()}` : "");
+        window.history.replaceState({}, "", path);
+      }
+    } catch {
+      // ignore
+    }
+    // Also check history state toast
+    if (window.history?.state?.usr?.toast) {
+      setBanner(String(window.history.state.usr.toast));
+    }
+  }, []);
+
   async function handleDelete() {
     if (!window.confirm("Delete this recipe?")) return;
     try {
@@ -99,6 +120,17 @@ export default function RecipeDetail() {
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
         <h1 style={{ margin: 0 }}>{recipe.title}</h1>
+        {role === "admin" && isAuthenticated && (
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={() => navigate(`/recipes/${encodeURIComponent(id)}/edit`)}
+            aria-label="Edit recipe"
+            title="Edit recipe"
+          >
+            Edit
+          </button>
+        )}
         {isAuthenticated && (
           <button
             type="button"
@@ -114,6 +146,11 @@ export default function RecipeDetail() {
         )}
       </div>
 
+      {banner && (
+        <div role="status" style={{ padding: 12, background: "#d1fae5", color: "#065f46", borderRadius: 8, margin: "12px 0" }}>
+          {banner}
+        </div>
+      )}
       <figure>
         <img
           src={heroSrc}
@@ -152,10 +189,33 @@ export default function RecipeDetail() {
       </section>
 
       {role === "admin" && isAuthenticated && (
-        <section aria-labelledby="admin-actions" style={{ marginTop: 24 }}>
-          <h2 id="admin-actions">Admin Actions</h2>
-          {/* Basic admin controls: delete */}
-          <button className="btn" onClick={handleDelete} aria-label="Delete recipe">
+        <section aria-labelledby="admin-actions" style={{ marginTop: 24, display: "flex", gap: 8, alignItems: "center" }}>
+          <h2 id="admin-actions" style={{ marginRight: 12 }}>Admin Actions</h2>
+          <button
+            className="btn"
+            onClick={() => navigate(`/recipes/${encodeURIComponent(id)}/edit`)}
+            aria-label="Edit recipe"
+            title="Edit recipe"
+            type="button"
+          >
+            Edit
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={async () => {
+              if (!window.confirm("Are you sure you want to delete this recipe? This cannot be undone.")) return;
+              try {
+                await Api.deleteRecipe(id);
+                // Navigate to recipes with banner message
+                navigate(`/recipes`, { replace: true, state: { toast: "Recipe deleted." } });
+              } catch (e) {
+                setErr(e);
+              }
+            }}
+            aria-label="Delete recipe"
+            title="Delete recipe"
+            type="button"
+          >
             Delete
           </button>
         </section>
