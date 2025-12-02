@@ -90,8 +90,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
     Api.health()
-      .then(() => {
-        if (mounted) setHealth("ok");
+      .then((status) => {
+        if (mounted) setHealth(status === "ok" ? "ok" : "unavailable");
       })
       .catch(() => {
         if (mounted) setHealth("unavailable");

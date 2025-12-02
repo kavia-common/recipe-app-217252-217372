@@ -40,7 +40,10 @@ export default function RecipesList() {
     const controller = new AbortController();
     Api.listRecipes(params, { signal: controller.signal })
       .then((res) => setRecipes(res || []))
-      .catch((e) => setErr(e))
+      .catch((e) => {
+        if (e?.name === "AbortError") return;
+        setErr(e);
+      })
       .finally(() => setLoading(false));
     // update URL
     const q = new URLSearchParams();
