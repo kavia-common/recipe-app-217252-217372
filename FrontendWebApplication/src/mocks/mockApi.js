@@ -153,6 +153,12 @@ export const MockApi = {
       });
     } else if (sort === "newest") {
       base.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    } else if (sort === "price") {
+      base.sort((a, b) => {
+        const ap = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+        const bp = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+        return ap - bp;
+      });
     }
 
     // Search q

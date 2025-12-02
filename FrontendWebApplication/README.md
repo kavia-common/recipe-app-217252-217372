@@ -161,6 +161,25 @@ Mock Mode vs Live Backend:
 - Live Backend: Uses `PUT /recipes/{id}` and `DELETE /recipes/{id}` with a bearer JWT (admin only).
 - Mock Mode: Updates and deletes are persisted locally in `localStorage` under `mock_recipes_dataset`, so changes survive reloads.
 
+## Price Field (Recipes)
+
+- Optional numeric field `price` (USD). Non-negative, supports cents (step=0.01).
+- UI:
+  - Cards and Detail show price like "$12.99" when present.
+  - Hidden when missing.
+- Admin Edit:
+  - Recipe form includes a "Price (USD)" number input with `min=0` and `step=0.01`.
+  - Accessible label, help text, and validation errors are announced via aria-describedby/role=alert.
+  - Saved in the update payload as `price` when valid; omitted if empty.
+- API:
+  - Api.listRecipes / Api.getRecipe / Api.updateRecipe pass through `price` if present.
+- Mock Mode:
+  - src/mocks/data.js deterministically assigns a reasonable price (3.99–29.99) to each recipe if none exists.
+  - Updates via mockApi.updateRecipe persist the `price` to localStorage (`mock_recipes_dataset`).
+  - Sorting by price is supported with `sort=price` (ascending).
+- Diagnostics:
+  - /diagnostics shows count and a sample price from listRecipes when available.
+
 ## Notes
 
 - JWT is stored in memory and persisted to localStorage as `auth_token`.

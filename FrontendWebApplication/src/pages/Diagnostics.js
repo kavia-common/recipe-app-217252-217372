@@ -55,7 +55,11 @@ export default function Diagnostics() {
         const params = {};
         if (testQ) params.q = testQ;
         const list = await Api.listRecipes(params);
-        next.recipes = { status: "ok", count: Array.isArray(list) ? list.length : 0 };
+        next.recipes = {
+          status: "ok",
+          count: Array.isArray(list) ? list.length : 0,
+          samplePrice: Array.isArray(list) && list.length > 0 && typeof list[0]?.price === "number" ? Number(list[0].price).toFixed(2) : undefined
+        };
         if (Array.isArray(list) && list.length > 0) {
           firstId = list[0]?.id ?? null;
         }
@@ -246,7 +250,7 @@ export default function Diagnostics() {
             GET <code>/health</code>: {renderStatus(results.health)}
           </li>
           <li>
-            GET <code>/recipes</code>: {renderStatus(results.recipes)} {results.recipes?.count != null && <span>• count: {results.recipes.count}</span>}
+            GET <code>/recipes</code>: {renderStatus(results.recipes)} {results.recipes?.count != null && <span>• count: {results.recipes.count}</span>} {results.recipes?.samplePrice ? <span>• sample price: ${results.recipes.samplePrice}</span> : null}
           </li>
           <li>
             GET <code>/recipes/{`{id}`}</code>: {renderStatus(results.recipeById)} {results.recipeById?.id && <span>• id: {results.recipeById.id}</span>}

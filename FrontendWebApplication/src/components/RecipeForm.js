@@ -18,6 +18,7 @@ export default function RecipeForm({ initialValue, onSubmit, submitting }) {
     isFeatured: false,
     ingredients: [""],
     steps: [""],
+    price: undefined,
     ...(initialValue || {}),
   }));
 
@@ -31,12 +32,19 @@ export default function RecipeForm({ initialValue, onSubmit, submitting }) {
       prepTime: toNum(initialValue.prepTime),
       cookTime: toNum(initialValue.cookTime),
       isFeatured: !!initialValue.isFeatured,
+      price: toPrice(initialValue.price),
     }));
   }, [initialValue]);
 
   function toNum(v) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
+  }
+
+  function toPrice(v) {
+    if (v === undefined || v === null || v === "") return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Number(n.toFixed(2)) : undefined;
   }
 
   function normalizeArray(a) {
@@ -78,6 +86,9 @@ export default function RecipeForm({ initialValue, onSubmit, submitting }) {
     if ((form.steps || []).filter((s) => s.trim()).length === 0) e.steps = "At least one step is required.";
     if (form.prepTime < 0) e.prepTime = "Prep time must be 0 or greater.";
     if (form.cookTime < 0) e.cookTime = "Cook time must be 0 or greater.";
+    if (form.price !== undefined && !(Number.isFinite(Number(form.price)) && Number(form.price) >= 0)) {
+      e.price = "Price must be a non-negative number.";
+    }
     return e;
   }, [form]);
 
@@ -102,6 +113,10 @@ export default function RecipeForm({ initialValue, onSubmit, submitting }) {
       isFeatured: !!form.isFeatured,
       ingredients: (form.ingredients || []).map((s) => s.trim()).filter(Boolean),
       steps: (form.steps || []).map((s) => s.trim()).filter(Boolean),
+      // Only include price when valid (optional)
+      ...(form.price !== undefined && form.price !== "" && Number(form.price) >= 0
+        ? { price: Number(Number(form.price).toFixed(2)) }
+        : { price: undefined }),
     };
     onSubmit?.(cleaned);
   }
@@ -218,6 +233,29 @@ export default function RecipeForm({ initialValue, onSubmit, submitting }) {
             </div>
           )}
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="field-price">Price (USD)</label>
+        <input
+          id="field-price"
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.price ?? ""}
+          onChange={(e) => updateField("price", e.target.value === "" ? undefined : Number(e.target.value))}
+          aria-invalid={!!errors.price}
+          aria-describedby={`price-help${errors.price ? " err-price" : ""}`}
+          placeholder="e.g., 12.99 (optional)"
+        />
+        <div id="price-help" style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+          Optional. Enter a non-negative amount in USD (e.g., 3.99).
+        </div>
+        {errors.price && (
+          <div id="err-price" role="alert" style={{ color: "#991b1b" }}>
+            {errors.price}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

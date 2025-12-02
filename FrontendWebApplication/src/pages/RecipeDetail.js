@@ -170,6 +170,9 @@ export default function RecipeDetail() {
         <span className="chip">Prep: {recipe.prepTime || 0}m</span>
         <span className="chip">Cook: {recipe.cookTime || 0}m</span>
         <span className="chip">Total: {totalTime}m</span>
+        {typeof recipe.price === "number" && recipe.price >= 0 ? (
+          <span className="chip" aria-label={`Price $${Number(recipe.price).toFixed(2)}`}>Price: ${Number(recipe.price).toFixed(2)}</span>
+        ) : null}
       </div>
 
       <section aria-labelledby="ingredients-title" style={{ marginTop: 16 }}>

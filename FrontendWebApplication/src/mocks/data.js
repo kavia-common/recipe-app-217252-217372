@@ -54,7 +54,19 @@ const baseRecipesRaw = [/* unchanged dataset as above */];
 const baseRecipes = baseRecipesRaw.map((r, idx) => {
   const imageUrl = selectCategoryImagePath(r) || selectCategoryImagePath({ ...r, id: `${r.id}-${idx}` });
   const top = deriveTopLevelCategory(r);
-  return { ...r, imageUrl, topLevelCategory: top };
+  // Assign a reasonable mock price if missing: deterministic by id for stability
+  let price = r.price;
+  if (price === undefined || price === null || Number(price) < 0) {
+    const seed = Array.from(String(r.id || idx)).reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const min = 3.99;
+    const max = 29.99;
+    const rand = (Math.sin(seed) + 1) / 2; // 0..1 deterministic
+    const val = min + rand * (max - min);
+    price = Number(val.toFixed(2));
+  } else {
+    price = Number(Number(price).toFixed(2));
+  }
+  return { ...r, imageUrl, topLevelCategory: top, price };
 });
 
 // PUBLIC_INTERFACE
@@ -104,6 +116,12 @@ export function getMockRecipes({
     });
   } else if (sort === "newest") {
     out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  } else if (sort === "price") {
+    out.sort((a, b) => {
+      const ap = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
+      const bp = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
+      return ap - bp; // ascending price
+    });
   }
 
   if (page != null && pageSize != null && page > 0 && pageSize > 0) {

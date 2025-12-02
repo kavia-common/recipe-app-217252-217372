@@ -290,6 +290,7 @@ export const Api = {
     return apiFetch(`/recipes/${encodeURIComponent(id)}`, options);
   },
   createRecipe: (recipe) => {
+    // Pass price through as provided (optional). Validate minimally client-side.
     if (mockFlag()) return MockApi.createRecipe(recipe);
     return apiFetch("/recipes", { method: "POST", body: recipe, auth: true });
   },
@@ -298,6 +299,7 @@ export const Api = {
    * Update a recipe (admin-only on live backend). Returns updated recipe.
    */
   updateRecipe: (id, recipe, options = {}) => {
+    // Ensure we preserve optional 'price' field in payload
     if (mockFlag()) return MockApi.updateRecipe(id, recipe);
     const { signal } = options || {};
     return apiFetch(`/recipes/${encodeURIComponent(id)}`, {

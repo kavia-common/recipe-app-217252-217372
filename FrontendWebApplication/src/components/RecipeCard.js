@@ -38,6 +38,7 @@ export default function RecipeCard({ recipe, onClick }) {
     prepTime,
     cookTime,
     isFeatured,
+    price,
   } = recipe;
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
@@ -159,6 +160,9 @@ export default function RecipeCard({ recipe, onClick }) {
           {cuisine && <span className="chip" aria-label={`Cuisine ${cuisine}`}>{cuisine}</span>}
           {difficulty && <span className="chip" aria-label={`Difficulty ${difficulty}`}>{difficulty}</span>}
           <span className="chip" aria-label={`Total time ${totalTime} minutes`}>⏱ {totalTime}m</span>
+          {typeof price === "number" && price >= 0 ? (
+            <span className="chip" aria-label={`Price $${price.toFixed(2)}`}>💲 ${price.toFixed(2)}</span>
+          ) : null}
         </div>
       </div>
     </article>

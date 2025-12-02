@@ -139,6 +139,7 @@ export default function Filters({ value, onChange }) {
           <option value="newest">Newest</option>
           <option value="trending">Trending</option>
           <option value="featured">Featured</option>
+          <option value="price">Price (low to high)</option>
         </select>
       </label>
     </form>
