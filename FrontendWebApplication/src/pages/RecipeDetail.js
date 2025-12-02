@@ -4,6 +4,7 @@ import { Api } from "../api/client";
 import Loading from "../components/Loading";
 import ErrorMessage from "../components/ErrorMessage";
 import { AuthContext } from "../context/AuthContext";
+import { normalizeImageUrl } from "../components/RecipeCard";
 
 // PUBLIC_INTERFACE
 export default function RecipeDetail() {
@@ -43,6 +44,7 @@ export default function RecipeDetail() {
   if (!recipe) return <p role="status">Recipe not found.</p>;
 
   const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
+  const heroSrc = normalizeImageUrl(recipe.imageUrl, recipe.id || id);
 
   return (
     <main className="container" role="main" style={{ padding: 16 }}>
@@ -50,7 +52,7 @@ export default function RecipeDetail() {
       <h1 style={{ marginTop: 12 }}>{recipe.title}</h1>
       <figure>
         <img
-          src={recipe.imageUrl || "https://via.placeholder.com/800x450?text=Recipe"}
+          src={heroSrc}
           alt={recipe.title ? `${recipe.title} image` : "Recipe image"}
           style={{ width: "100%", maxWidth: 900, borderRadius: 12 }}
         />

@@ -2,6 +2,8 @@
  * Representative mock datasets for recipes and categories used in mock mode.
  * This expanded dataset includes 20+ recipes spanning categories/cuisines/difficulties,
  * and deterministic fields used to power sorting: featured, trendingScore, createdAt.
+ * Images: each recipe has a unique image URL with stable cache-busting (?rid=<id>)
+ * and an optional build seed for preview cache invalidation (&v=<seed>).
  */
 
 // PUBLIC_INTERFACE
@@ -25,24 +27,58 @@ function daysAgo(n) {
   return d.toISOString();
 }
 
+// Optional build-time seed (stable during a build) to assist preview cache invalidation.
+// Prefer stable per-ID cache busting; this is additive.
+const BUILD_SEED =
+  String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true"
+    ? "1"
+    : "";
+
 /**
- * Build a cuisine/meal-specific Unsplash image URL
- * - Uses query tag as a stable cache key via `sig=`
- * - Sets width/height and auto=format for consistent rendering
- * - fit=crop to honor card/detail aspect
+ * Build a cuisine/meal-specific image URL ensuring uniqueness per recipe id.
+ * We use picsum.photos with a seed based on the recipe and also allow a fallback
+ * to Unsplash-style URLs. Each final URL includes:
+ * - ?rid=<id> as stable per-ID cache buster
+ * - &v=<BUILD_SEED> when enabled to change across builds, not renders
  */
-const img = (q) =>
-  `https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&h=675&q=60&sig=${encodeURIComponent(
-    q
-  )}`;
+function buildImageUrl(kind, id, label) {
+  // Prefer a deterministic placeholder that is unique by id.
+  const text = encodeURIComponent(label || kind || "Recipe");
+  // Use picsum with seed; force dimensions. This guarantees different images per id.
+  const picsum = `https://picsum.photos/seed/${encodeURIComponent(
+    id || kind || text
+  )}/1200/675`;
+
+  // Add stable rid param and optional seed
+  const params = new URLSearchParams();
+  if (id) params.set("rid", String(id));
+  if (BUILD_SEED) params.set("v", BUILD_SEED);
+
+  return `${picsum}?${params.toString()}&text=${text}`;
+}
+
+/**
+ * Alternate Unsplash images with different query/sig to increase visual variance.
+ * Note: Unsplash hotlinking policies vary; picsum above already ensures variety.
+ */
+function unsplashVariant(topic, id) {
+  const base =
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&h=675&q=60";
+  const params = new URLSearchParams();
+  params.set("sig", `${topic}-${id}`);
+  if (id) params.set("rid", String(id));
+  if (BUILD_SEED) params.set("v", BUILD_SEED);
+  return `${base}&${params.toString()}`;
+}
 
 // Base recipes (IDs are stable)
+// Each recipe.imageUrl is explicitly unique and includes ?rid=<id>&v=<seed>
 const baseRecipes = [
   {
     id: "r-1",
     title: "Classic Pancakes",
     description: "Fluffy pancakes perfect for a cozy morning.",
-    imageUrl: img("pancakes"),
+    imageUrl: buildImageUrl("pancakes", "r-1", "Pancakes"),
     category: "Breakfast",
     cuisine: "American",
     difficulty: "easy",
@@ -70,7 +106,7 @@ const baseRecipes = [
     id: "r-2",
     title: "Spaghetti Aglio e Olio",
     description: "Garlicky olive oil pasta finished with parsley and chili flakes.",
-    imageUrl: img("aglio-olio"),
+    imageUrl: buildImageUrl("aglio-olio", "r-2", "Aglio e Olio"),
     category: "Dinner",
     cuisine: "Italian",
     difficulty: "easy",
@@ -97,7 +133,7 @@ const baseRecipes = [
     id: "r-3",
     title: "Vegan Buddha Bowl",
     description: "Colorful bowl with quinoa, roasted veggies, and tahini-lemon dressing.",
-    imageUrl: img("buddha-bowl"),
+    imageUrl: buildImageUrl("buddha-bowl", "r-3", "Buddha Bowl"),
     category: "Vegan",
     cuisine: "Fusion",
     difficulty: "medium",
@@ -127,7 +163,7 @@ const baseRecipes = [
     id: "r-4",
     title: "Chicken Tikka Masala",
     description: "Creamy tomato-based curry with marinated chicken.",
-    imageUrl: img("tikka-masala"),
+    imageUrl: buildImageUrl("tikka-masala", "r-4", "Tikka Masala"),
     category: "Dinner",
     cuisine: "Indian",
     difficulty: "hard",
@@ -157,7 +193,7 @@ const baseRecipes = [
     id: "r-5",
     title: "Avocado Toast",
     description: "Quick breakfast with creamy avocado and crunchy toast.",
-    imageUrl: img("avocado-toast"),
+    imageUrl: buildImageUrl("avocado-toast", "r-5", "Avocado Toast"),
     category: "Breakfast",
     cuisine: "Modern",
     difficulty: "easy",
@@ -184,7 +220,7 @@ const baseRecipes = [
     id: "r-6",
     title: "Chocolate Brownies",
     description: "Rich, fudgy brownies with a crackly top.",
-    imageUrl: img("brownies"),
+    imageUrl: buildImageUrl("brownies", "r-6", "Brownies"),
     category: "Dessert",
     cuisine: "American",
     difficulty: "medium",
@@ -212,7 +248,7 @@ const baseRecipes = [
     id: "r-7",
     title: "Greek Salad",
     description: "Crisp cucumbers, tomatoes, olives, and feta with lemon-oregano dressing.",
-    imageUrl: img("greek-salad"),
+    imageUrl: buildImageUrl("greek-salad", "r-7", "Greek Salad"),
     category: "Salad",
     cuisine: "Greek",
     difficulty: "easy",
@@ -241,7 +277,7 @@ const baseRecipes = [
     id: "r-8",
     title: "Tom Yum Soup",
     description: "Hot and sour Thai soup with shrimp and fragrant herbs.",
-    imageUrl: img("tom-yum"),
+    imageUrl: buildImageUrl("tom-yum", "r-8", "Tom Yum"),
     category: "Soup",
     cuisine: "Thai",
     difficulty: "medium",
@@ -272,7 +308,7 @@ const baseRecipes = [
     id: "r-9",
     title: "Sushi Bowl",
     description: "Deconstructed sushi with rice, salmon, avocado, and nori.",
-    imageUrl: img("sushi-bowl"),
+    imageUrl: buildImageUrl("sushi-bowl", "r-9", "Sushi Bowl"),
     category: "Lunch",
     cuisine: "Japanese",
     difficulty: "medium",
@@ -301,7 +337,7 @@ const baseRecipes = [
     id: "r-10",
     title: "Beef Tacos",
     description: "Weeknight-friendly tacos with spiced beef and fresh toppings.",
-    imageUrl: img("beef-tacos"),
+    imageUrl: buildImageUrl("beef-tacos", "r-10", "Beef Tacos"),
     category: "Dinner",
     cuisine: "Mexican",
     difficulty: "easy",
@@ -328,7 +364,7 @@ const baseRecipes = [
     id: "r-11",
     title: "Miso Ramen",
     description: "Comforting ramen with miso broth and soft-boiled egg.",
-    imageUrl: img("miso-ramen"),
+    imageUrl: buildImageUrl("miso-ramen", "r-11", "Miso Ramen"),
     category: "Dinner",
     cuisine: "Japanese",
     difficulty: "hard",
@@ -355,7 +391,7 @@ const baseRecipes = [
     id: "r-12",
     title: "Falafel Wrap",
     description: "Crispy falafel with tahini sauce and fresh veggies.",
-    imageUrl: img("falafel-wrap"),
+    imageUrl: buildImageUrl("falafel-wrap", "r-12", "Falafel Wrap"),
     category: "Lunch",
     cuisine: "Middle Eastern",
     difficulty: "medium",
@@ -383,7 +419,7 @@ const baseRecipes = [
     id: "r-13",
     title: "Margherita Pizza",
     description: "Classic pizza with tomato sauce, mozzarella, and basil.",
-    imageUrl: img("margherita"),
+    imageUrl: buildImageUrl("margherita", "r-13", "Margherita Pizza"),
     category: "Dinner",
     cuisine: "Italian",
     difficulty: "medium",
@@ -409,7 +445,7 @@ const baseRecipes = [
     id: "r-14",
     title: "Pad Thai",
     description: "Stir-fried rice noodles with tamarind, egg, and peanuts.",
-    imageUrl: img("pad-thai"),
+    imageUrl: buildImageUrl("pad-thai", "r-14", "Pad Thai"),
     category: "Dinner",
     cuisine: "Thai",
     difficulty: "medium",
@@ -438,7 +474,7 @@ const baseRecipes = [
     id: "r-15",
     title: "Blueberry Muffins",
     description: "Tender muffins bursting with blueberries.",
-    imageUrl: img("blueberry-muffins"),
+    imageUrl: buildImageUrl("blueberry-muffins", "r-15", "Blueberry Muffins"),
     category: "Dessert",
     cuisine: "American",
     difficulty: "easy",
@@ -466,7 +502,7 @@ const baseRecipes = [
     id: "r-16",
     title: "Shakshuka",
     description: "Eggs poached in spicy tomato-pepper sauce.",
-    imageUrl: img("shakshuka"),
+    imageUrl: buildImageUrl("shakshuka", "r-16", "Shakshuka"),
     category: "Breakfast",
     cuisine: "Middle Eastern",
     difficulty: "easy",
@@ -494,7 +530,7 @@ const baseRecipes = [
     id: "r-17",
     title: "Caprese Sandwich",
     description: "Fresh mozzarella, tomato, and basil on ciabatta.",
-    imageUrl: img("caprese-sandwich"),
+    imageUrl: buildImageUrl("caprese-sandwich", "r-17", "Caprese Sandwich"),
     category: "Lunch",
     cuisine: "Italian",
     difficulty: "easy",
@@ -520,7 +556,7 @@ const baseRecipes = [
     id: "r-18",
     title: "César Salad",
     description: "Crisp romaine, creamy dressing, croutons, and parmesan.",
-    imageUrl: img("caesar-salad"),
+    imageUrl: buildImageUrl("caesar-salad", "r-18", "Caesar Salad"),
     category: "Salad",
     cuisine: "American",
     difficulty: "easy",
@@ -546,7 +582,7 @@ const baseRecipes = [
     id: "r-19",
     title: "Butter Chicken",
     description: "Silky tomato-butter sauce with tender chicken.",
-    imageUrl: img("butter-chicken"),
+    imageUrl: buildImageUrl("butter-chicken", "r-19", "Butter Chicken"),
     category: "Dinner",
     cuisine: "Indian",
     difficulty: "medium",
@@ -576,7 +612,7 @@ const baseRecipes = [
     id: "r-20",
     title: "Tiramisu",
     description: "Espresso-soaked ladyfingers layered with mascarpone cream.",
-    imageUrl: img("tiramisu"),
+    imageUrl: buildImageUrl("tiramisu", "r-20", "Tiramisu"),
     category: "Dessert",
     cuisine: "Italian",
     difficulty: "medium",
@@ -602,7 +638,7 @@ const baseRecipes = [
     id: "r-21",
     title: "Guacamole",
     description: "Chunky, zesty guacamole for chips or tacos.",
-    imageUrl: img("guacamole"),
+    imageUrl: buildImageUrl("guacamole", "r-21", "Guacamole"),
     category: "Snack",
     cuisine: "Mexican",
     difficulty: "easy",
@@ -628,7 +664,7 @@ const baseRecipes = [
     id: "r-22",
     title: "French Onion Soup",
     description: "Deeply caramelized onions in rich broth with Gruyère toasts.",
-    imageUrl: img("onion-soup"),
+    imageUrl: buildImageUrl("onion-soup", "r-22", "Onion Soup"),
     category: "Soup",
     cuisine: "French",
     difficulty: "hard",
@@ -657,7 +693,7 @@ const baseRecipes = [
     id: "r-23",
     title: "Hummus",
     description: "Creamy hummus with tahini, lemon, and olive oil.",
-    imageUrl: img("hummus"),
+    imageUrl: buildImageUrl("hummus", "r-23", "Hummus"),
     category: "Snack",
     cuisine: "Middle Eastern",
     difficulty: "easy",
@@ -683,7 +719,7 @@ const baseRecipes = [
     id: "r-24",
     title: "Pho Ga (Chicken Pho)",
     description: "Delicate Vietnamese chicken noodle soup with aromatics.",
-    imageUrl: img("pho-ga"),
+    imageUrl: buildImageUrl("pho-ga", "r-24", "Pho Ga"),
     category: "Dinner",
     cuisine: "Vietnamese",
     difficulty: "medium",

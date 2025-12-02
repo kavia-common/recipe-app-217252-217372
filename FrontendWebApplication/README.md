@@ -27,6 +27,7 @@ Optional:
 - `REACT_APP_API_VERSIONED_PATH` to force a versioned path (e.g., `/api/v1`) regardless of the origin provided in the base.
 - `REACT_APP_HEALTHCHECK_PATH` (not required; health check uses `/health` on the API base)
 - `REACT_APP_USE_MOCK_API` enable mock mode when set to `true`.
+- `REACT_APP_IMAGE_CACHE_BUST` (default: `true`): when true, mock images include a small build seed (`&v=1`). Images always include a stable per-recipe cache buster (`?rid=<id>`), ensuring distinct images in previews.
 
 Create a `.env` in the app root if needed (do not commit secrets):
 
@@ -34,6 +35,8 @@ Create a `.env` in the app root if needed (do not commit secrets):
 REACT_APP_API_BASE=https://api.example.com/api/v1
 # To run the UI without a backend:
 REACT_APP_USE_MOCK_API=true
+# Optional: control mock image build seed (keeps per-ID cache busting regardless)
+REACT_APP_IMAGE_CACHE_BUST=true
 ```
 
 ## Mock Mode (No-backend Preview)
@@ -44,6 +47,10 @@ When `REACT_APP_USE_MOCK_API=true`:
 - Feedback and profile actions stub success and update local mock profile.
 - Header shows a small “Mock Mode” badge and the health indicator reads “API: Mocked.”
 - Diagnostics page indicates mock mode and does not perform real network requests.
+- Mock images are guaranteed unique per recipe and update in previews thanks to:
+  - Stable per-recipe cache-busting param: `?rid=<recipe-id>`
+  - Optional build seed: `&v=1` when `REACT_APP_IMAGE_CACHE_BUST=true`
+  - Rendering uses a small utility to normalize image URLs if any custom URL is missing these params.
 
 To disable mock mode, remove the env variable or set it to `false`.
 

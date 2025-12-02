@@ -2,18 +2,50 @@ import React from "react";
 import "./recipe.css";
 
 /**
- * Optionally normalize the incoming image URL.
- * Currently just returns the provided URL or a fallback if falsy.
- * Could be extended to append cache-busting or size params by recipe id if needed.
+ * PUBLIC_INTERFACE
+ * normalizeImageUrl ensures every image has a stable per-recipe cache-busting param.
+ * - If input is falsy, provides a placeholder that also includes ?rid=<id>
+ * - If input lacks ?rid, append ?rid=<id> (or &rid=) and optional &v=<seed> when enabled
  */
-function normalizeImageUrl(url) {
-  return url || "https://via.placeholder.com/640x360?text=Recipe";
+export function normalizeImageUrl(imageUrl, id) {
+  /** Normalize/augment image URL with unique, stable cache-busting based on recipe id. */
+  const buildSeed =
+    String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true"
+      ? "1"
+      : "";
+  const rid = id ? String(id) : "unknown";
+  const ensureParams = (url) => {
+    try {
+      const hasQuery = url.includes("?");
+      const sep = hasQuery ? "&" : "?";
+      // only append rid if not present already
+      const hasRid = /[?&]rid=/.test(url);
+      const hasV = /[?&]v=/.test(url);
+      let next = url;
+      if (!hasRid) next += `${sep}rid=${encodeURIComponent(rid)}`;
+      if (buildSeed && !hasV) next += `${hasRid || hasQuery ? "&" : "?"}v=${buildSeed}`;
+      return next;
+    } catch {
+      // if URL parsing fails, return as-is
+      return url;
+    }
+  };
+
+  if (!imageUrl) {
+    // unique placeholder per id
+    const placeholder = `https://picsum.photos/seed/${encodeURIComponent(
+      rid
+    )}/1200/675?text=${encodeURIComponent("Recipe")}`;
+    return ensureParams(placeholder);
+  }
+  return ensureParams(imageUrl);
 }
 
 // PUBLIC_INTERFACE
 export default function RecipeCard({ recipe, onClick }) {
   /** Accessible recipe card component. */
   const {
+    id,
     title,
     description,
     imageUrl,
@@ -26,7 +58,7 @@ export default function RecipeCard({ recipe, onClick }) {
   } = recipe;
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
-  const src = normalizeImageUrl(imageUrl);
+  const src = normalizeImageUrl(imageUrl, id);
 
   return (
     <article
