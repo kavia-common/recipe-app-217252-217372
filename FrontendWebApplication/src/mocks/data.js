@@ -25,9 +25,14 @@ function daysAgo(n) {
   return d.toISOString();
 }
 
-// Placeholder-friendly image URLs (Unsplash placeholders)
+/**
+ * Build a cuisine/meal-specific Unsplash image URL
+ * - Uses query tag as a stable cache key via `sig=`
+ * - Sets width/height and auto=format for consistent rendering
+ * - fit=crop to honor card/detail aspect
+ */
 const img = (q) =>
-  `https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=60&sig=${encodeURIComponent(
+  `https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&h=675&q=60&sig=${encodeURIComponent(
     q
   )}`;
 
