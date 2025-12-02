@@ -47,17 +47,22 @@ When `REACT_APP_USE_MOCK_API=true`:
 - Feedback and profile actions stub success and update local mock profile.
 - Header shows a small “Mock Mode” badge and the health indicator reads “API: Mocked.”
 - Diagnostics page indicates mock mode and does not perform real network requests.
-- Mock images are guaranteed unique per recipe and reliably load in previews thanks to:
-  - Deterministic primary URLs using picsum.photos seeds per recipe (no API key required)
-  - Curated, hotlink-friendly CDN images for a subset of recipes
-  - Two-stage fallback in UI components:
-    1) primary imageUrl (explicit or generated),
-    2) deterministic curated fallback per recipe,
-    3) bundled local placeholder at `src/assets/food-placeholder.jpg`
-  - Stable per-recipe cache-busting param: `?rid=<recipe-id>` and optional build seed `&v=1` when `REACT_APP_IMAGE_CACHE_BUST=true`
+- Mock images are guaranteed unique per recipe and reliably load in previews thanks to a curated, food-only image set:
+  - Primary: deterministic curated URL chosen from a strict whitelist (Cloudinary demo + CDN static food images).
+  - Fallback1: alternate curated URL computed by a different deterministic index (ensures a different image/host where possible).
+  - Fallback2: bundled local placeholder at `/assets/food-placeholder.jpg`.
+  - Stable per-recipe cache-busting param: `?rid=<recipe-id>` and optional build seed `&v=1` when `REACT_APP_IMAGE_CACHE_BUST=true`.
   - Local assets are not modified by cache-busting to preserve caching semantics.
+- No generic/landscape/random sources (e.g., picsum) are used in mock mode to guarantee food-only visuals.
 
 To disable mock mode, remove the env variable or set it to `false`.
+
+### Customizing the curated image set
+
+You can replace the curated set used in mock mode by editing `src/mocks/imageUtil.js`:
+- Update the `CURATED_FOOD_WHITELIST` array with 30+ food-only image URLs from your preferred CDN.
+- Keep them hotlink-friendly and sized close to 1200x675 for best quality.
+- The app maps recipes to these URLs deterministically, ensuring distinct images per recipe.
 
 ## Getting Started
 

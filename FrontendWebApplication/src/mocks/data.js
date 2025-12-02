@@ -1,7 +1,7 @@
 import { buildFoodImageUrl } from "./imageUtil";
 /**
  * Representative mock datasets for recipes and categories used in mock mode.
- * Uses deterministic picsum or curated URLs for reliable preview images.
+ * Uses deterministic curated URLs for reliable, food-only preview images.
  * Stable per-recipe cache-busting helpers live in imageUtil/consumers.
  */
 
@@ -713,7 +713,7 @@ const baseRecipesRaw = [
 
 /* Compute final image URLs:
    - If curated imageUrl is present use it
-   - Else generate deterministic picsum-based URL via buildFoodImageUrl
+   - Else generate deterministic curated URL via buildFoodImageUrl (food-only)
 */
 const baseRecipes = baseRecipesRaw.map((r) => ({
   ...r,

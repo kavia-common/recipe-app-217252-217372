@@ -20,14 +20,15 @@ export default function RecipeDetail() {
 
   // Precompute image-related hooks unconditionally to satisfy rules-of-hooks;
   // We'll only use them in the render when recipe is available.
+  const fb = useMemo(() => deterministicFallbacks({ id }), [id]);
+
   const initialHero = useMemo(() => {
     if (!recipe) return "/assets/food-placeholder.jpg";
-    const base = resolveFoodImageUrl(recipe);
-    const n = normalizeImageUrl(base || getStrictFoodFallback(1200, 675, recipe.id || id), recipe.id || id);
-    return n || "/assets/food-placeholder.jpg";
+    // Primary = curated deterministic URL or explicit imageUrl if present
+    const base = resolveFoodImageUrl(recipe) || getStrictFoodFallback(1200, 675, recipe.id || id);
+    return normalizeImageUrl(base, recipe.id || id) || "/assets/food-placeholder.jpg";
   }, [recipe, id]);
 
-  const fb = useMemo(() => deterministicFallbacks(recipe || { id }), [recipe, id]);
   const triedFallback = useRef(false);
   const [heroSrc, setHeroSrc] = useState(initialHero);
   const [finalTried, setFinalTried] = useState(false);
@@ -63,6 +64,7 @@ export default function RecipeDetail() {
   }
 
   function onHeroError() {
+    // Stage 1: alternate curated URL
     if (!triedFallback.current) {
       triedFallback.current = true;
       const next = fb.curated;
@@ -71,6 +73,7 @@ export default function RecipeDetail() {
         return;
       }
     }
+    // Stage 2: local placeholder
     if (!finalTried) {
       setFinalTried(true);
       setHeroSrc("/assets/food-placeholder.jpg");

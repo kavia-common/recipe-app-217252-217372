@@ -49,21 +49,24 @@ export default function RecipeCard({ recipe, onClick }) {
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
 
+  // Compute deterministic fallbacks once per recipe
+  const fallbacks = useMemo(() => deterministicFallbacks(recipe), [recipe]);
+
   const initialSrc = useMemo(() => {
     const base = resolveFoodImageUrl(recipe);
-    return normalizeImageUrl(base || getStrictFoodFallback(1200, 675, id), id);
+    // Primary = curated deterministic URL; if recipe has explicit imageUrl use it, else buildFoodImageUrl provides curated
+    const primary = base || getStrictFoodFallback(1200, 675, id);
+    return normalizeImageUrl(primary, id);
   }, [recipe, id]);
 
-  const fallbacks = useMemo(() => deterministicFallbacks(recipe), [recipe]);
   const triedFallback = useRef(false);
   const [src, setSrc] = useState(initialSrc);
   const [finalTried, setFinalTried] = useState(false);
 
-  function onImgError(e) {
-    // Stage 1: deterministic curated/picsum fallback (whichever is not current)
+  function onImgError() {
+    // Stage 1: alternate curated URL (different deterministic index)
     if (!triedFallback.current) {
       triedFallback.current = true;
-      // choose curated fallback to avoid hitting the same failing host
       const next = fallbacks.curated;
       if (next && next !== src) {
         setSrc(normalizeImageUrl(next, id));
