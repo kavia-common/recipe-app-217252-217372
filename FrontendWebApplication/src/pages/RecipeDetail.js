@@ -9,24 +9,16 @@ import { resolveFoodImageUrl, deterministicFallbacks } from "../mocks/imageUtil"
 
 // PUBLIC_INTERFACE
 export default function RecipeDetail() {
-  /** Detailed recipe view with admin actions conditionally rendered. */
+  /** Detailed recipe view with favorite toggle, robust image fallbacks, and admin delete. */
   const { id } = useParams();
   const navigate = useNavigate();
   const { role, isAuthenticated, isFavorite, toggleFavorite } = useContext(AuthContext);
->>>>>>> REPLACE   
-````   
-````edit file="recipe-app-217252-217372/FrontendWebApplication/src/pages/RecipeDetail.js"      
-<<<<<<< SEARCH
-      <div style={{ display: \"flex\", alignItems: \"center\", gap: 12, marginTop: 12 }}>\n        <h1 style={{ margin: 0 }}>{recipe.title}</h1>\n        {isAuthenticated && (\n          <button\n            type=\"button\"\n            className=\"btn\"\n            onClick={() => toggleFavorite(recipe.id)}\n            aria-label={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            aria-pressed={isFavorite(recipe.id)}\n            title={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            style={{ padding: \"6px 8px\" }}\n          >\n            {isFavorite(recipe.id) ? \"❤️\" : \"🤍\"}\n          </button>\n        )}\n      </div>\n      <figure>
-=======
-      <div style={{ display: \"flex\", alignItems: \"center\", gap: 12, marginTop: 12 }}>\n        <h1 style={{ margin: 0 }}>{recipe.title}</h1>\n        {isAuthenticated && (\n          <button\n            type=\"button\"\n            className=\"btn\"\n            onClick={() => toggleFavorite(recipe.id)}\n            aria-label={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            aria-pressed={isFavorite(recipe.id)}\n            title={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            style={{ padding: \"6px 8px\" }}\n          >\n            {isFavorite(recipe.id) ? \"❤️\" : \"🤍\"}\n          </button>\n        )}\n      </div>\n      <figure>
 
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  // Precompute image-related hooks unconditionally to satisfy rules-of-hooks;
-  // We'll only use them in the render when recipe is available.
+  // Precompute image-related hooks unconditionally to satisfy rules-of-hooks.
   const fb = useMemo(() => deterministicFallbacks({ id }), [id]);
 
   const initialHero = useMemo(() => {
@@ -50,6 +42,7 @@ export default function RecipeDetail() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    setErr(null);
     Api.getRecipe(id)
       .then((res) => mounted && setRecipe(res))
       .catch((e) => mounted && setErr(e))
@@ -92,10 +85,35 @@ export default function RecipeDetail() {
 
   const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
 
+  const favored = isAuthenticated ? isFavorite(recipe.id) : false;
+  const onFavClick = () => {
+    if (!isAuthenticated) return;
+    toggleFavorite(recipe.id);
+  };
+
   return (
     <main className="container" role="main" style={{ padding: 16 }}>
-      <button className="btn" onClick={() => navigate(-1)} aria-label="Go back">← Back</button>
-      <h1 style={{ marginTop: 12 }}>{recipe.title}</h1>
+      <button className="btn" onClick={() => navigate(-1)} aria-label="Go back">
+        ← Back
+      </button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
+        <h1 style={{ margin: 0 }}>{recipe.title}</h1>
+        {isAuthenticated && (
+          <button
+            type="button"
+            className="btn"
+            onClick={onFavClick}
+            aria-label={favored ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={favored}
+            title={favored ? "Remove from favorites" : "Add to favorites"}
+            style={{ padding: "6px 8px" }}
+          >
+            {favored ? "❤️" : "🤍"}
+          </button>
+        )}
+      </div>
+
       <figure>
         <img
           src={heroSrc}
@@ -105,6 +123,7 @@ export default function RecipeDetail() {
         />
         {recipe.description && <figcaption style={{ color: "#555" }}>{recipe.description}</figcaption>}
       </figure>
+
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "12px 0" }}>
         {recipe.category && <span className="chip">Category: {recipe.category}</span>}
         {recipe.cuisine && <span className="chip">Cuisine: {recipe.cuisine}</span>}
@@ -118,7 +137,7 @@ export default function RecipeDetail() {
         <h2 id="ingredients-title">Ingredients</h2>
         <ul>
           {(recipe.ingredients || []).map((ing, idx) => (
-            <li key={idx}>{ing}</li>
+            <li key={idx}>{(ing || "").toString()}</li>
           ))}
         </ul>
       </section>
@@ -127,7 +146,7 @@ export default function RecipeDetail() {
         <h2 id="steps-title">Steps</h2>
         <ol>
           {(recipe.steps || []).map((step, idx) => (
-            <li key={idx}>{step}</li>
+            <li key={idx}>{(step || "").toString()}</li>
           ))}
         </ol>
       </section>
@@ -135,8 +154,10 @@ export default function RecipeDetail() {
       {role === "admin" && isAuthenticated && (
         <section aria-labelledby="admin-actions" style={{ marginTop: 24 }}>
           <h2 id="admin-actions">Admin Actions</h2>
-          {/* Basic admin controls: delete; create/update would be separate forms */}
-          <button className="btn" onClick={handleDelete} aria-label="Delete recipe">Delete</button>
+          {/* Basic admin controls: delete */}
+          <button className="btn" onClick={handleDelete} aria-label="Delete recipe">
+            Delete
+          </button>
         </section>
       )}
     </main>
