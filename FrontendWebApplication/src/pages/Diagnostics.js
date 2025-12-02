@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Api, apiFetch, getApiBase } from "../api/client";
+import { Api, getApiBase, isMockEnabled } from "../api/client";
 
 // PUBLIC_INTERFACE
 export default function Diagnostics() {
@@ -17,10 +17,10 @@ export default function Diagnostics() {
     async function run() {
       const next = { health: {}, recipes: {}, recipeById: { status: "skipped" } };
 
-      // /health
+      // health via Api
       try {
-        await apiFetch("/health");
-        next.health = { status: "ok" };
+        const h = await Api.health();
+        next.health = { status: h === "ok" ? "ok" : "error", message: isMockEnabled() ? "Mock mode: health is simulated" : undefined };
       } catch (e) {
         next.health = {
           status: "error",
@@ -30,10 +30,10 @@ export default function Diagnostics() {
         };
       }
 
-      // /recipes
+      // recipes via Api
       let firstId = null;
       try {
-        const list = await apiFetch("/recipes");
+        const list = await Api.listRecipes();
         next.recipes = { status: "ok", count: Array.isArray(list) ? list.length : 0 };
         if (Array.isArray(list) && list.length > 0) {
           firstId = list[0]?.id ?? null;
@@ -50,7 +50,7 @@ export default function Diagnostics() {
       // /recipes/{id} only when an id was found
       if (firstId) {
         try {
-          const detail = await apiFetch(`/recipes/${encodeURIComponent(firstId)}`);
+          const detail = await Api.getRecipe(firstId);
           next.recipeById = { status: "ok", id: firstId, title: detail?.title || "" };
         } catch (e) {
           next.recipeById = {
@@ -94,6 +94,11 @@ export default function Diagnostics() {
         <p>Environment precedence: REACT_APP_API_BASE → REACT_APP_BACKEND_URL → same-origin + "/api". Optional override: REACT_APP_API_VERSIONED_PATH (e.g., "/api/v1").</p>
       </section>
 
+      {isMockEnabled() && (
+        <div role="note" style={{ padding: 12, background: "#fef3c7", color: "#92400e", borderRadius: 8 }}>
+          Mock mode is active. All requests are served from in-app mocks; no network calls are made.
+        </div>
+      )}
       <section aria-labelledby="checks" style={{ marginTop: 16 }}>
         <h2 id="checks">Endpoint Checks</h2>
         <ul>

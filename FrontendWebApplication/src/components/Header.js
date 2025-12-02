@@ -1,12 +1,14 @@
 import React, { useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { getApiBase } from "../api/client";
+import { getApiBase, isMockEnabled } from "../api/client";
 import "./header.css";
 
 export default function Header() {
   const { isAuthenticated, user, role, logout, health } = useContext(AuthContext);
   const apiBase = useMemo(() => getApiBase(), []);
+
+  const mock = isMockEnabled();
 
   return (
     <header className="site-header" role="banner">
@@ -21,12 +23,17 @@ export default function Header() {
           )}
         </div>
         <div className="nav-right">
+          {mock && (
+            <span className="nav-link" style={{ background: "#fef3c7", color: "#92400e", borderRadius: 8, padding: "4px 8px", fontWeight: 700 }}>
+              Mock Mode
+            </span>
+          )}
           <span
             className={`health ${health === "ok" ? "ok" : "bad"}`}
             aria-live="polite"
             title={`API base: ${apiBase}`}
           >
-            {health === "ok" ? "API: Healthy" : "API: Unavailable"}
+            {mock ? "API: Mocked" : health === "ok" ? "API: Healthy" : "API: Unavailable"}
           </span>
           <span className="nav-link" aria-label="Resolved API base" style={{ opacity: 0.8 }}>
             {apiBase}

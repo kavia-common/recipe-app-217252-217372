@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { Api, tokenStore } from "../api/client";
+import { Api, tokenStore, isMockEnabled } from "../api/client";
 
 // PUBLIC_INTERFACE
 export const AuthContext = createContext({
@@ -22,6 +22,19 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState("checking");
+
+  // In mock mode, initialize a fake token if none exists
+  useEffect(() => {
+    if (isMockEnabled() && !tokenStore.get()) {
+      tokenStore.set("mock-token");
+      try {
+        const existing = localStorage.getItem("mock_user_profile");
+        if (!existing) {
+          localStorage.setItem("mock_user_profile", JSON.stringify({ id: "u-1", username: "mockuser", email: "mock@example.com", role: "user" }));
+        }
+      } catch {}
+    }
+  }, []);
 
   const isAuthenticated = !!tokenStore.get();
 
@@ -89,6 +102,13 @@ export function AuthProvider({ children }) {
   // Initialize: check health and profile
   useEffect(() => {
     let mounted = true;
+
+    if (isMockEnabled()) {
+      setHealth("ok");
+      refreshProfile();
+      return () => { mounted = false; };
+    }
+
     Api.health()
       .then((status) => {
         if (mounted) setHealth(status === "ok" ? "ok" : "unavailable");

@@ -1,4 +1,4 @@
-//
+import { MockApi, isMockEnabled as mockFlag } from "../mocks/mockApi";
 //
 // Centralized API client with JWT handling and environment-driven base URL
 //
@@ -40,6 +40,11 @@ function normalizeBase(raw, forceVersionedPath = "") {
     if (forceVersionedPath) base = forceVersionedPath.startsWith("/") ? forceVersionedPath : `/${forceVersionedPath}`;
     return base.replace(/\/*$/, "");
   }
+}
+
+/** Detect if mock mode is active */
+export function isMockEnabled() {
+  return mockFlag();
 }
 
 // PUBLIC_INTERFACE
@@ -133,6 +138,14 @@ export async function apiFetch(
   path,
   { method = "GET", body, headers = {}, auth = false, signal } = {}
 ) {
+  // In mock mode, apiFetch should generally not be invoked; protect accidental use in Diagnostics.
+  if (isMockEnabled()) {
+    // Provide a clear error to any direct apiFetch calls in mock mode.
+    const e = new Error("apiFetch disabled in mock mode");
+    e.status = 0;
+    e.url = path;
+    throw e;
+  }
   /**
    * Fetch wrapper that attaches base URL, JSON headers, optional auth token,
    * and handles JSON parsing with graceful fallback.
@@ -198,8 +211,9 @@ export async function apiFetch(
 
 // PUBLIC_INTERFACE
 export const Api = {
-  /** Health check for preview readiness; always resolves to "ok" or "unavailable". */
+  /** Health check for preview readiness */
   health: async () => {
+    if (mockFlag()) return "ok";
     try {
       await apiFetch("/health");
       return "ok";
@@ -210,6 +224,13 @@ export const Api = {
 
   /** Auth endpoints */
   login: async (email, password) => {
+    if (mockFlag()) {
+      const res = await MockApi.login(email, password);
+      if (res?.accessToken) tokenStore.set(res.accessToken);
+      // Save mock user profile for later getProfile
+      try { localStorage.setItem("mock_user_profile", JSON.stringify(res.user)); } catch {}
+      return res;
+    }
     const res = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password },
@@ -217,26 +238,42 @@ export const Api = {
     if (res?.accessToken) tokenStore.set(res.accessToken);
     return res;
   },
-  register: (username, email, password) =>
-    apiFetch("/auth/register", {
+  register: (username, email, password) => {
+    if (mockFlag()) return MockApi.register(username, email, password);
+    return apiFetch("/auth/register", {
       method: "POST",
       body: { username, email, password },
-    }),
-  logout: () =>
-    apiFetch("/auth/logout", { method: "POST", auth: true }).finally(() =>
+    });
+  },
+  logout: () => {
+    if (mockFlag()) {
+      tokenStore.clear();
+      return MockApi.logout();
+    }
+    return apiFetch("/auth/logout", { method: "POST", auth: true }).finally(() =>
       tokenStore.clear()
-    ),
+    );
+  },
 
   /** Profile endpoints */
-  getProfile: () => apiFetch("/user/profile", { auth: true }),
-  updateProfile: (data) =>
-    apiFetch("/user/profile", { method: "PUT", body: data, auth: true }),
+  getProfile: () => {
+    if (mockFlag()) return MockApi.getProfile();
+    return apiFetch("/user/profile", { auth: true });
+  },
+  updateProfile: (data) => {
+    if (mockFlag()) return MockApi.updateProfile(data);
+    return apiFetch("/user/profile", { method: "PUT", body: data, auth: true });
+  },
 
   /** Categories */
-  getCategories: () => apiFetch("/categories"),
+  getCategories: () => {
+    if (mockFlag()) return MockApi.getCategories();
+    return apiFetch("/categories");
+  },
 
   /** Recipes */
   listRecipes: (params = {}, options = {}) => {
+    if (mockFlag()) return MockApi.listRecipes(params);
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") qs.append(k, v);
@@ -245,24 +282,37 @@ export const Api = {
     const { signal } = options || {};
     return apiFetch(`/recipes${suffix}`, { signal });
   },
-  getRecipe: (id, options = {}) =>
-    apiFetch(`/recipes/${encodeURIComponent(id)}`, options),
-  createRecipe: (recipe) =>
-    apiFetch("/recipes", { method: "POST", body: recipe, auth: true }),
-  updateRecipe: (id, recipe) =>
-    apiFetch(`/recipes/${encodeURIComponent(id)}`, {
+  getRecipe: (id, options = {}) => {
+    if (mockFlag()) return MockApi.getRecipe(id);
+    return apiFetch(`/recipes/${encodeURIComponent(id)}`, options);
+  },
+  createRecipe: (recipe) => {
+    if (mockFlag()) return MockApi.createRecipe(recipe);
+    return apiFetch("/recipes", { method: "POST", body: recipe, auth: true });
+  },
+  updateRecipe: (id, recipe) => {
+    if (mockFlag()) return MockApi.updateRecipe(id, recipe);
+    return apiFetch(`/recipes/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: recipe,
       auth: true,
-    }),
-  deleteRecipe: (id) =>
-    apiFetch(`/recipes/${encodeURIComponent(id)}`, {
+    });
+  },
+  deleteRecipe: (id) => {
+    if (mockFlag()) return MockApi.deleteRecipe(id);
+    return apiFetch(`/recipes/${encodeURIComponent(id)}`, {
       method: "DELETE",
       auth: true,
-    }),
+    });
+  },
 
   /** Feedback */
-  submitFeedback: (feedback) =>
-    apiFetch("/feedback", { method: "POST", body: feedback, auth: true }),
-  listFeedback: (options = {}) => apiFetch("/feedback", { auth: true, ...options }),
+  submitFeedback: (feedback) => {
+    if (mockFlag()) return MockApi.submitFeedback(feedback);
+    return apiFetch("/feedback", { method: "POST", body: feedback, auth: true });
+  },
+  listFeedback: (options = {}) => {
+    if (mockFlag()) return MockApi.listFeedback();
+    return apiFetch("/feedback", { auth: true, ...options });
+  },
 };
