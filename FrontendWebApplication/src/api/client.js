@@ -10,6 +10,7 @@
  * - trims trailing slashes
  * - ensures a path exists when origin-only URL is provided
  * - optionally overrides/forces a versioned path (e.g. /api/v1)
+ * - prefers relative path when target origin equals current window origin
  */
 function normalizeBase(raw, forceVersionedPath = "") {
   try {
@@ -21,7 +22,15 @@ function normalizeBase(raw, forceVersionedPath = "") {
     } else if (pathname === "/") {
       pathname = "/api";
     }
-    return `${url.origin}${pathname}`.replace(/\/+$/, "");
+    // Prefer returning relative path for same-origin to avoid CORS/preview issues
+    try {
+      if (typeof window !== "undefined" && window.location?.origin && url.origin === window.location.origin) {
+        return pathname.replace(/\/*$/, "");
+      }
+    } catch {
+      // ignore window access errors
+    }
+    return `${url.origin}${pathname}`.replace(/\/*$/, "");
   } catch {
     // relative path like "/api" or "api/v1"
     let base = (raw || "").trim();
@@ -29,7 +38,7 @@ function normalizeBase(raw, forceVersionedPath = "") {
     if (!base.startsWith("/")) base = `/${base}`;
     // Apply force path if requested
     if (forceVersionedPath) base = forceVersionedPath.startsWith("/") ? forceVersionedPath : `/${forceVersionedPath}`;
-    return base.replace(/\/+$/, "");
+    return base.replace(/\/*$/, "");
   }
 }
 
@@ -58,7 +67,8 @@ export function getApiBase() {
   // Fallback to same-origin + /api when no env variables are provided.
   try {
     if (typeof window !== "undefined" && window.location?.origin) {
-      const fallback = `${window.location.origin}/api`;
+      // Prefer a relative path so that proxies/frames keep requests same-origin.
+      const fallback = `/api`;
       return normalizeBase(fallback, forceVersionedPath);
     }
   } catch {
@@ -127,7 +137,7 @@ export async function apiFetch(
    * Fetch wrapper that attaches base URL, JSON headers, optional auth token,
    * and handles JSON parsing with graceful fallback.
    */
-  const base = (getApiBase() || "").replace(/\/+$/, "");
+  const base = (getApiBase() || "").replace(/\/*$/, "");
   const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 
   const finalHeaders = {
@@ -180,6 +190,7 @@ export async function apiFetch(
     );
     error.status = response.status;
     error.payload = payload;
+    error.url = url;
     throw error;
   }
   return payload;

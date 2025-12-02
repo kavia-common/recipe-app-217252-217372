@@ -26,6 +26,7 @@ export default function Diagnostics() {
           status: "error",
           message: e?.message || "Unknown error",
           details: e?.payload || null,
+          url: e?.url,
         };
       }
 
@@ -42,6 +43,7 @@ export default function Diagnostics() {
           status: "error",
           message: e?.message || "Unknown error",
           details: e?.payload || null,
+          url: e?.url,
         };
       }
 
@@ -77,6 +79,7 @@ export default function Diagnostics() {
     return (
       <div style={{ color: "#991b1b" }}>
         <div><strong>Failed:</strong> {item.message}</div>
+        {item.url && <div style={{ fontFamily: "monospace" }}>URL: {item.url}</div>}
         {item.details && <pre style={{ whiteSpace: "pre-wrap" }}>{typeof item.details === "string" ? item.details : JSON.stringify(item.details, null, 2)}</pre>}
       </div>
     );
