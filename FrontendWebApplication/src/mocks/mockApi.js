@@ -119,8 +119,43 @@ export const MockApi = {
   listRecipes: async (params = {}) => {
     await maybeDelay();
     const dataset = readRecipes();
-    // Apply filters and sorts similarly to getMockRecipes but using current dataset
+    // Apply filters and sorts; extend with newest, most-liked, fastest
     const { page, pageSize, q = "", category = "", cuisine = "", difficulty = "", sort = "" } = params || {};
+
+    // Read favorites and mock likes map from localStorage for "most-liked"
+    const readFavorites = () => {
+      try {
+        const raw = localStorage.getItem("favorites");
+        const ids = raw ? JSON.parse(raw) : [];
+        return Array.isArray(ids) ? ids.map(String) : [];
+      } catch {
+        return [];
+      }
+    };
+    const ensureMockLikes = (all) => {
+      // Map recipeId -> likes; initialize stable fallback based on id hash if absent
+      let map = {};
+      try {
+        const raw = localStorage.getItem("mockLikes");
+        map = raw ? JSON.parse(raw) : {};
+      } catch {
+        map = {};
+      }
+      const getSeed = (rid) => {
+        const s = String(rid || "");
+        let h = 0;
+        for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0;
+        // produce small baseline likes 0..9
+        return h % 10;
+      };
+      const next = { ...map };
+      for (const r of all) {
+        const k = String(r.id);
+        if (next[k] == null) next[k] = (typeof r.likes === "number" ? r.likes : undefined) ?? getSeed(k);
+      }
+      try { localStorage.setItem("mockLikes", JSON.stringify(next)); } catch {}
+      return next;
+    };
 
     let base = [...dataset];
 
@@ -142,22 +177,52 @@ export const MockApi = {
     }
 
     // Sorts
-    if (sort === "featured") {
+    const sortKey = String(sort || "").toLowerCase();
+    if (sortKey === "featured") {
       base = base.filter((r) => !!r.isFeatured);
       base.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-    } else if (sort === "trending") {
+    } else if (sortKey === "trending") {
       base.sort((a, b) => {
         const s = (b.trendingScore || 0) - (a.trendingScore || 0);
         if (s !== 0) return s;
         return (b.createdAt || "").localeCompare(a.createdAt || "");
       });
-    } else if (sort === "newest") {
+    } else if (sortKey === "newest") {
       base.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-    } else if (sort === "price") {
+    } else if (sortKey === "price") {
       base.sort((a, b) => {
         const ap = typeof a.price === "number" ? a.price : Number.POSITIVE_INFINITY;
         const bp = typeof b.price === "number" ? b.price : Number.POSITIVE_INFINITY;
         return ap - bp;
+      });
+    } else if (sortKey === "most-liked") {
+      const favs = readFavorites();
+      const likesMap = ensureMockLikes(dataset);
+      const likeScore = (r) => {
+        const rid = String(r.id);
+        const baseline = typeof r.likes === "number" ? r.likes : (likesMap[rid] ?? 0);
+        const favBonus = favs.includes(rid) ? 1 : 0;
+        return baseline + favBonus;
+      };
+      base.sort((a, b) => {
+        const s = likeScore(b) - likeScore(a);
+        if (s !== 0) return s;
+        return (b.createdAt || "").localeCompare(a.createdAt || "");
+      });
+      // annotate for diagnostics (non-persistent)
+      base = base.map((r) => ({ ...r, __mockLikes: likeScore(r) }));
+    } else if (sortKey === "fastest") {
+      const time = (r) => {
+        if (typeof r.cookTime === "number") return r.cookTime;
+        const prep = Number(r.prepTime || 0);
+        const cook = Number(r.cookTime || 0);
+        return prep + cook;
+      };
+      base.sort((a, b) => {
+        const sa = time(a);
+        const sb = time(b);
+        if (sa !== sb) return sa - sb; // ascending
+        return (a.title || "").localeCompare(b.title || "");
       });
     }
 
@@ -283,6 +348,14 @@ export const MockApi = {
       const ids = raw ? JSON.parse(raw) : [];
       const next = Array.from(new Set([...(Array.isArray(ids) ? ids : []), String(recipeId)]));
       localStorage.setItem("favorites", JSON.stringify(next));
+      // optional: increment mockLikes
+      try {
+        const rid = String(recipeId);
+        const lmRaw = localStorage.getItem("mockLikes");
+        const lm = lmRaw ? JSON.parse(lmRaw) : {};
+        lm[rid] = (lm[rid] ?? 0) + 1;
+        localStorage.setItem("mockLikes", JSON.stringify(lm));
+      } catch {}
       return { ok: true };
     } catch {
       return { ok: false };
@@ -295,6 +368,14 @@ export const MockApi = {
       const ids = raw ? JSON.parse(raw) : [];
       const next = (Array.isArray(ids) ? ids : []).filter((id) => id !== String(recipeId));
       localStorage.setItem("favorites", JSON.stringify(next));
+      // optional: decrement mockLikes
+      try {
+        const rid = String(recipeId);
+        const lmRaw = localStorage.getItem("mockLikes");
+        const lm = lmRaw ? JSON.parse(lmRaw) : {};
+        if (typeof lm[rid] === "number" && lm[rid] > 0) lm[rid] = lm[rid] - 1;
+        localStorage.setItem("mockLikes", JSON.stringify(lm));
+      } catch {}
       return { ok: true };
     } catch {
       return { ok: false };

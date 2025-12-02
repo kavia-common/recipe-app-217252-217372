@@ -180,6 +180,23 @@ Mock Mode vs Live Backend:
 - Diagnostics:
   - /diagnostics shows count and a sample price from listRecipes when available.
 
+## Sorting
+
+New sort options are available across the app:
+
+- newest: orders recipes by createdAt (descending).
+- most-liked: orders by a like score. On a real backend, pass sort=most-liked and the server should implement it. In Mock Mode, likes are derived from:
+  - a baseline per-recipe score (stable, seeded by id) and optional recipe.likes field, and
+  - your local favorites: favoriting increments a mockLikes counter in localStorage, unfavoriting decrements it.
+- fastest: orders by cookTime ascending; if cookTime is missing, falls back to (prepTime + cookTime).
+
+Behavior:
+- Filters page adds a Sort select with Newest, Most liked, Fastest, keeping prior options like Trending, Featured, and Price.
+- The selected sort is reflected in the URL as sort=<value> and re-fetches the list.
+
+Diagnostics:
+- The /diagnostics page now includes quick buttons for sort=newest|most-liked|fastest and shows the first 3 items with their sort metric for quick verification.
+
 ## Notes
 
 - JWT is stored in memory and persisted to localStorage as `auth_token`.

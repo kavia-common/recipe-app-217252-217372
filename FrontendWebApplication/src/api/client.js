@@ -275,7 +275,7 @@ export const Api = {
   listRecipes: (params = {}, options = {}) => {
     if (mockFlag()) return MockApi.listRecipes(params);
     const qs = new URLSearchParams();
-    // Pass through all provided params including search 'q' unchanged
+    // Pass through all provided params including search 'q' and 'sort' unchanged (backend will interpret)
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") {
         qs.append(k, v);

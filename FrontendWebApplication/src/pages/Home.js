@@ -18,9 +18,13 @@ export default function Home() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    // In Mock Mode, map trending to most-liked for better representation
+    const trendingSort = (typeof process !== "undefined" && String(process.env.REACT_APP_USE_MOCK_API || "").toLowerCase() === "true")
+      ? "most-liked"
+      : "trending";
     Promise.all([
       Api.listRecipes({ sort: "featured" }),
-      Api.listRecipes({ sort: "trending" }),
+      Api.listRecipes({ sort: trendingSort }),
       Api.listRecipes({ sort: "newest" }),
     ])
       .then(([f, t, n]) => {

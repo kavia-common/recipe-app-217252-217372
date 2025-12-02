@@ -10,6 +10,7 @@ export default function Diagnostics() {
     health: { status: "pending" },
     recipes: { status: "pending" },
     recipeById: { status: "skipped" }, // will run if we find any id from list
+    sortChecks: { status: "idle", items: [] }, // newest|most-liked|fastest preview
   });
 
   const [testQ, setTestQ] = useState("");
@@ -68,7 +69,7 @@ export default function Diagnostics() {
         Object.entries(params).forEach(([k, v]) => v && qs.append(k, v));
         const mocked = isMockEnabled();
         const base = mocked ? "(mocked)" : getApiBase();
-        const finalUrl = mocked ? `/recipes${qs.toString() ? `?${qs.toString()}` : ""}` : `${(getApiBase() || "").replace(/\/+$/, "")}/recipes${qs.toString() ? `?${qs.toString()}` : ""}`;
+        const finalUrl = mocked ? `/recipes${qs.toString() ? `?${qs.toString()}` : ""}` : `${(getApiBase() || "").replace(/\/*$/, "")}/recipes${qs.toString() ? `?${qs.toString()}` : ""}`;
         setLastRequestInfo({ url: finalUrl, params, mocked, base });
       } catch (e) {
         next.recipes = {
@@ -95,7 +96,7 @@ export default function Diagnostics() {
         }
       }
 
-      if (mounted) setResults(next);
+      if (mounted) setResults((prev) => ({ ...prev, ...next }));
     }
 
     run();
@@ -167,7 +168,7 @@ export default function Diagnostics() {
       <section aria-labelledby="checks" style={{ marginTop: 16 }}>
         <h2 id="checks">Endpoint Checks</h2>
         <div style={{ marginBottom: 12 }}>
-          <form onSubmit={(e) => { e.preventDefault(); /* retrigger effect */ setResults((r) => ({ ...r, recipes: { status: "pending" }, recipeById: { status: "skipped" } })); }}>
+          <form onSubmit={(e) => { e.preventDefault(); setResults((r) => ({ ...r, recipes: { status: "pending" }, recipeById: { status: "skipped" }, sortChecks: { status: "idle", items: [] } })); }}>
             <label htmlFor="diag-q">Quick test for /recipes with q</label>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <input
@@ -180,8 +181,7 @@ export default function Diagnostics() {
                 style={{ maxWidth: 360 }}
               />
               <button className="btn" type="button" onClick={() => {
-                // re-run checks with current q
-                setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" } });
+                setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" }, sortChecks: { status: "idle", items: [] } });
               }}>
                 Run test
               </button>
@@ -201,9 +201,7 @@ export default function Diagnostics() {
                 className="btn btn-secondary"
                 type="button"
                 onClick={() => {
-                  // Trigger a fetch with category set; we reuse Api.listRecipes in effect: set testQ to a unique token and back to re-run
-                  // Instead we run inline here for clarity and update lastRequestInfo/results
-                  setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" } });
+                  setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" }, sortChecks: { status: "idle", items: [] } });
                   (async () => {
                     try {
                       const list = await Api.listRecipes({ category: c });
@@ -212,7 +210,7 @@ export default function Diagnostics() {
                       qs.set("category", c);
                       const mocked = isMockEnabled();
                       const base = mocked ? "(mocked)" : getApiBase();
-                      const finalUrl = mocked ? `/recipes?${qs.toString()}` : `${(getApiBase() || "").replace(/\/+$/, "")}/recipes?${qs.toString()}`;
+                      const finalUrl = mocked ? `/recipes?${qs.toString()}` : `${(getApiBase() || "").replace(/\/*$/, "")}/recipes?${qs.toString()}`;
                       setLastRequestInfo({ url: finalUrl, params: { category: c }, mocked, base });
                       if (Array.isArray(list) && list.length > 0) {
                         const id = list[0].id;
@@ -235,6 +233,45 @@ export default function Diagnostics() {
             ))}
           </div>
 
+          {/* Quick buttons to test sorting */}
+          <div role="group" aria-label="Test sort parameter" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            {[
+              { key: "newest", label: "sort=newest" },
+              { key: "most-liked", label: "sort=most-liked" },
+              { key: "fastest", label: "sort=fastest" },
+            ].map((s) => (
+              <button
+                key={s.key}
+                className="btn"
+                type="button"
+                onClick={() => {
+                  (async () => {
+                    try {
+                      const list = await Api.listRecipes({ sort: s.key });
+                      const top3 = (Array.isArray(list) ? list.slice(0, 3) : []).map((r) => ({
+                        id: r.id, title: r.title,
+                        metric: s.key === "newest" ? r.createdAt :
+                                s.key === "most-liked" ? (r.likes ?? r.__mockLikes ?? 0) :
+                                s.key === "fastest" ? (typeof r.cookTime === "number" ? r.cookTime : (Number(r.prepTime || 0) + Number(r.cookTime || 0))) : null
+                      }));
+                      setResults((prev) => ({ ...prev, sortChecks: { status: "ok", items: top3, type: s.key } }));
+                      const qs = new URLSearchParams(); qs.set("sort", s.key);
+                      const mocked = isMockEnabled();
+                      const base = mocked ? "(mocked)" : getApiBase();
+                      const finalUrl = mocked ? `/recipes?${qs.toString()}` : `${(getApiBase() || "").replace(/\/*$/, "")}/recipes?${qs.toString()}`;
+                      setLastRequestInfo({ url: finalUrl, params: { sort: s.key }, mocked, base });
+                    } catch (e) {
+                      setResults((prev) => ({ ...prev, sortChecks: { status: "error", message: e?.message || "Error" } }));
+                    }
+                  })();
+                }}
+                aria-label={`Run /recipes with sort=${s.key}`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
           {lastRequestInfo && (
             <div style={{ marginTop: 8, fontSize: "0.9rem" }}>
               <div><strong>Request:</strong> <code>{lastRequestInfo.url}</code></div>
@@ -243,6 +280,24 @@ export default function Diagnostics() {
                 <div><strong>Criteria:</strong> {Object.entries(lastRequestInfo.params).map(([k, v]) => `${k}=${v}`).join(", ")}</div>
               )}
             </div>
+          )}
+
+          {/* Display sort check results */}
+          {results.sortChecks?.status === "ok" && (
+            <div style={{ marginTop: 8 }}>
+              <div><strong>Sort check:</strong> {results.sortChecks.type}</div>
+              <ol>
+                {results.sortChecks.items.map((it) => (
+                  <li key={it.id}>
+                    <span style={{ fontWeight: 600 }}>{it.title}</span>
+                    {" "}- metric: <code>{String(it.metric)}</code>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {results.sortChecks?.status === "error" && (
+            <div style={{ color: "#991b1b", marginTop: 8 }}>Sort check failed: {results.sortChecks.message}</div>
           )}
         </div>
         <ul>

@@ -132,11 +132,20 @@ export default function Filters({ value, onChange }) {
           <option value="hard">Hard</option>
         </select>
       </label>
-      <label>
+      <label htmlFor="sort-select">
         Sort
-        <select value={local.sort || ""} onChange={(e) => updateField("sort", e.target.value)} aria-label="Sort">
+        <select
+          id="sort-select"
+          value={local.sort || ""}
+          onChange={(e) => updateField("sort", e.target.value)}
+          aria-label="Sort recipes"
+        >
+          {/* Prominent new options */}
           <option value="">Default</option>
           <option value="newest">Newest</option>
+          <option value="most-liked">Most liked</option>
+          <option value="fastest">Fastest (cook time)</option>
+          {/* Keep existing options */}
           <option value="trending">Trending</option>
           <option value="featured">Featured</option>
           <option value="price">Price (low to high)</option>

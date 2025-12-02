@@ -54,6 +54,27 @@ const baseRecipesRaw = [/* unchanged dataset as above */];
 const baseRecipes = baseRecipesRaw.map((r, idx) => {
   const imageUrl = selectCategoryImagePath(r) || selectCategoryImagePath({ ...r, id: `${r.id}-${idx}` });
   const top = deriveTopLevelCategory(r);
+
+  // Ensure createdAt: deterministic by id index if missing
+  let createdAt = r.createdAt;
+  if (!createdAt) {
+    // Spread items across the past 60 days deterministically
+    const seed = Array.from(String(r.id || idx)).reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const days = (seed % 60) + 1;
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    createdAt = d.toISOString();
+  }
+
+  // Ensure cookTime: fallback to sum or a small default
+  let cookTime = typeof r.cookTime === "number" ? r.cookTime : undefined;
+  if (cookTime == null) {
+    const prep = Number(r.prepTime || 0);
+    const cook = Number(r.cookTime || 0);
+    const sum = prep + cook;
+    cookTime = Number.isFinite(sum) && sum > 0 ? sum : 15;
+  }
+
   // Assign a reasonable mock price if missing: deterministic by id for stability
   let price = r.price;
   if (price === undefined || price === null || Number(price) < 0) {
@@ -66,7 +87,8 @@ const baseRecipes = baseRecipesRaw.map((r, idx) => {
   } else {
     price = Number(Number(price).toFixed(2));
   }
-  return { ...r, imageUrl, topLevelCategory: top, price };
+
+  return { ...r, imageUrl, topLevelCategory: top, price, createdAt, cookTime };
 });
 
 // PUBLIC_INTERFACE
