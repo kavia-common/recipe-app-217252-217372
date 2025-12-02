@@ -1,32 +1,24 @@
 import React, { useMemo, useRef, useState } from "react";
 import "./recipe.css";
-import { resolveFoodImageUrl, getStrictFoodFallback, deterministicFallbacks } from "../mocks/imageUtil";
+import { resolveFoodImageUrl, deterministicFallbacks } from "../mocks/imageUtil";
 
 /**
  * PUBLIC_INTERFACE
- * normalizeImageUrl ensures every image has a stable per-recipe cache-busting param.
- * - For remote URLs: append ?rid=<id> and optional &v=<seed> (when enabled).
- * - For local/static assets (/, ./, ../): DO NOT append cache-busting to avoid breaking caching.
+ * normalizeImageUrl: for remote URLs only, append cache-busting; local assets unchanged.
  */
 export function normalizeImageUrl(imageUrl, id) {
-  /** Normalize/augment image URL with unique, stable cache-busting based on recipe id for remote URLs only. */
   if (!imageUrl) return imageUrl;
   const isLocal = imageUrl.startsWith("/") || imageUrl.startsWith("./") || imageUrl.startsWith("../");
   if (isLocal) return imageUrl;
-  const buildSeed =
-    String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true"
-      ? "1"
-      : "";
+  const buildSeedEnabled = String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true";
   const rid = id ? String(id) : "unknown";
   try {
     const hasQuery = imageUrl.includes("?");
     const sep = hasQuery ? "&" : "?";
-    const hasRid = /[?&]rid=/.test(imageUrl);
-    const hasV = /[?&]v=/.test(imageUrl);
-    let next = imageUrl;
-    if (!hasRid) next += `${sep}rid=${encodeURIComponent(rid)}`;
-    if (buildSeed && !hasV) next += `${hasRid || hasQuery ? "&" : "?"}v=${buildSeed}`;
-    return next;
+    const parts = [!/[?&]rid=/.test(imageUrl) ? `rid=${encodeURIComponent(rid)}` : ""];
+    if (buildSeedEnabled && !/[?&]v=/.test(imageUrl)) parts.push("v=1");
+    const toAdd = parts.filter(Boolean).join("&");
+    return toAdd ? `${imageUrl}${sep}${toAdd}` : imageUrl;
   } catch {
     return imageUrl;
   }
@@ -53,9 +45,7 @@ export default function RecipeCard({ recipe, onClick }) {
   const fallbacks = useMemo(() => deterministicFallbacks(recipe), [recipe]);
 
   const initialSrc = useMemo(() => {
-    const base = resolveFoodImageUrl(recipe);
-    // Primary = curated deterministic URL; if recipe has explicit imageUrl use it, else buildFoodImageUrl provides curated
-    const primary = base || getStrictFoodFallback(1200, 675, id);
+    const primary = resolveFoodImageUrl(recipe);
     return normalizeImageUrl(primary, id);
   }, [recipe, id]);
 
@@ -64,7 +54,6 @@ export default function RecipeCard({ recipe, onClick }) {
   const [finalTried, setFinalTried] = useState(false);
 
   function onImgError() {
-    // Stage 1: alternate curated URL (different deterministic index)
     if (!triedFallback.current) {
       triedFallback.current = true;
       const next = fallbacks.curated;
@@ -73,7 +62,6 @@ export default function RecipeCard({ recipe, onClick }) {
         return;
       }
     }
-    // Stage 2: local placeholder asset; ensure we don't loop
     if (!finalTried) {
       setFinalTried(true);
       setSrc("/assets/food-placeholder.jpg");

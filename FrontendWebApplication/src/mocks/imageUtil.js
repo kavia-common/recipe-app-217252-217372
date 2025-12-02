@@ -1,210 +1,22 @@
-/**
- * Utilities for deterministic, food-only mock images using hotlink-friendly sources.
- * STRICT: Only curated food images (no generic/landscape generators like picsum).
- * Primary: curated CDN/static set deterministically mapped by recipe id/hash and ingredient-aware keywords.
- * Fallbacks: alternate curated URL, then local bundled placeholder asset.
- */
+ /**
+  * Utilities for deterministic, food-only mock images using bundled local assets.
+  * STRICT: Only local curated images under /assets/food (no external hosts).
+  * Primary: local curated image deterministically mapped by recipe properties.
+  * Fallbacks: next local curated image (index+1), then local bundled placeholder asset.
+  */
 
-// Cloudinary demo + jsDelivr assets. Each list is strictly food and safe to hotlink for previews.
-const curatedFoodImageMap = {
-  chicken: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/chicken.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/chicken-curry.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/roast-chicken.jpg"
-  ],
-  beef: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/steak.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/steak.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/beef-bowl.jpg"
-  ],
-  pork: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pork-noodles.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pork-bbq.jpg"
-  ],
-  shrimp: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/fish.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/shrimp-pasta.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tom-yum.jpg"
-  ],
-  fish: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/fish.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/grilled-salmon.jpg"
-  ],
-  tofu: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tofu-stirfry.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/mapo-tofu.jpg"
-  ],
-  pasta: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/pasta.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pasta.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/agnio-olio.jpg"
-  ],
-  pizza: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/pizza.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pizza.jpg"
-  ],
-  salad: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/salad.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/salad.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/greek-salad.jpg"
-  ],
-  soup: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/soup.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/ramen.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tom-yum.jpg"
-  ],
-  curry: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/curry.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/curry.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/chicken-curry.jpg"
-  ],
-  taco: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tacos.jpg"
-  ],
-  burger: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/burger.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/burger.jpg"
-  ],
-  sandwich: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/sandwich.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/caprese-sandwich.jpg"
-  ],
-  sushi: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/sushi.jpg"
-  ],
-  ramen: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/ramen.jpg"
-  ],
-  pancake: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pancakes.jpg",
-  ],
-  waffle: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/waffles.jpg"
-  ],
-  omelette: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/omelette.jpg"
-  ],
-  brownie: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/brownies.jpg"
-  ],
-  muffin: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/muffins.jpg"
-  ],
-  dessert: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/dessert.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pie.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/brownies.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/muffins.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tiramisu.jpg"
-  ],
-  vegan: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/vegan-bowl.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/fruit-bowl.jpg"
-  ],
-  vegetarian: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/vegetarian-bowl.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/avocado-toast.jpg"
-  ],
-  avocado: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/avocado-toast.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/guacamole.jpg"
-  ],
-  falafel: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/falafel.jpg"
-  ],
-  hummus: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/hummus.jpg"
-  ],
-  shakshuka: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/shakshuka.jpg"
-  ],
-  pho: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pho.jpg"
-  ],
-  guacamole: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/guacamole.jpg"
-  ],
-  pizza_margherita: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pizza.jpg"
-  ],
-  // cuisines/categories fallbacks
-  italian: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pasta.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pizza.jpg"
-  ],
-  mexican: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tacos.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/guacamole.jpg"
-  ],
-  japanese: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/ramen.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/sushi-bowl.jpg"
-  ],
-  thai: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tom-yum.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pad-thai.jpg"
-  ],
-  indian: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/chicken-curry.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/butter-chicken.jpg"
-  ],
-  french: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/french-onion-soup.jpg"
-  ],
-  greek: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/greek-salad.jpg"
-  ],
-  middle_eastern: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/falafel.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/hummus.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/shakshuka.jpg"
-  ],
-  breakfast: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pancakes.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/omelette.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/waffles.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/avocado-toast.jpg"
-  ],
-  lunch: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/sandwich.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/caprese-sandwich.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/sushi-bowl.jpg"
-  ],
-  dinner: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/steak.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pasta.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pizza.jpg"
-  ],
-  dessert_cat: [
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/brownies.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/muffins.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pie.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tiramisu.jpg"
-  ],
-  salad_cat: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/salad.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/greek-salad.jpg"
-  ],
-  soup_cat: [
-    "https://res.cloudinary.com/demo/image/upload/w_1200,h_675,c_fill,q_auto,f_auto/food/soup.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/french-onion-soup.jpg",
-    "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tom-yum.jpg"
-  ]
-};
+const FOOD_ASSETS = Array.from({ length: 12 }, (_v, i) => {
+  const idx = String(i + 1).padStart(2, "0");
+  return `/assets/food/food-${idx}.jpg`;
+});
 
-// Flattened fallback list when nothing matches (food-only)
-const CURATED_FOOD_WHITELIST = Array.from(
-  new Set(
-    Object.values(curatedFoodImageMap).flat()
-  )
-);
-
-/**
- * Make a small, stable, per-build seed based on REACT_APP_IMAGE_CACHE_BUST.
- */
-function getBuildSeed() {
-  const enabled = String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true";
-  return enabled ? "1" : "";
+/** Hash utility for deterministic mapping */
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return h >>> 0;
 }
 
 /** Normalize strings */
@@ -212,7 +24,7 @@ function norm(s) {
   return String(s || "").toLowerCase();
 }
 
-/** Try to detect keywords in a string */
+/** Tokenize string to keywords */
 function tokensFromString(s) {
   return norm(s)
     .replace(/[^a-z0-9\s-]/g, " ")
@@ -223,7 +35,6 @@ function tokensFromString(s) {
 /**
  * PUBLIC_INTERFACE
  * Extract normalized ingredient/category/cuisine/title keywords from a recipe.
- * Returns a prioritized array of keywords e.g., ['chicken','garlic','pasta','salad','curry','soup','taco','pizza','beef','vegan','dessert','pancake','tofu','shrimp']
  */
 export function getIngredientKeywords(recipe) {
   const out = [];
@@ -231,11 +42,9 @@ export function getIngredientKeywords(recipe) {
     if (k && !out.includes(k)) out.push(k);
   };
 
-  // Ingredients scanning
   const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const ingredientTokens = ingredients.flatMap(tokensFromString);
 
-  // Map tokens to canonical keywords
   const tokenToKeyword = {
     chicken: "chicken",
     thigh: "chicken",
@@ -283,7 +92,6 @@ export function getIngredientKeywords(recipe) {
     tahini: "falafel",
     shakshuka: "shakshuka",
     pho: "pho",
-    rice: "sushi",
     quinoa: "vegan",
     spinach: "salad",
     feta: "salad",
@@ -298,7 +106,6 @@ export function getIngredientKeywords(recipe) {
     if (kw) push(kw);
   });
 
-  // Category to keyword
   const category = norm(recipe?.category);
   if (category.includes("dessert")) push("dessert");
   if (category.includes("salad")) push("salad");
@@ -308,9 +115,7 @@ export function getIngredientKeywords(recipe) {
   if (category.includes("vegetarian")) push("vegetarian");
   if (category.includes("lunch")) push("lunch");
   if (category.includes("dinner")) push("dinner");
-  if (category.includes("snack")) push("avocado"); // generic snack -> avocado as a pleasant default
 
-  // Cuisine to keyword
   const cuisine = norm(recipe?.cuisine);
   if (cuisine.includes("ital")) push("italian");
   if (cuisine.includes("mexic")) push("mexican");
@@ -319,10 +124,8 @@ export function getIngredientKeywords(recipe) {
   if (cuisine.includes("india")) push("indian");
   if (cuisine.includes("french")) push("french");
   if (cuisine.includes("greek")) push("greek");
-  if (cuisine.includes("middle")) push("middle_eastern");
   if (cuisine.includes("vietnam")) push("pho");
 
-  // Title fallback scanning
   const titleTokens = tokensFromString(recipe?.title);
   titleTokens.forEach((t) => {
     const kw = tokenToKeyword[t];
@@ -330,11 +133,8 @@ export function getIngredientKeywords(recipe) {
     if (t === "pizza" && !out.includes("pizza")) push("pizza");
     if (t === "salad" && !out.includes("salad")) push("salad");
     if (t === "soup" && !out.includes("soup")) push("soup");
-    if (t === "tiramisu") push("dessert");
-    if (t === "margherita") push("pizza_margherita");
   });
 
-  // Final category fallbacks
   if (!out.length) {
     if (category.includes("dessert")) push("dessert");
     else if (category.includes("salad")) push("salad");
@@ -346,9 +146,7 @@ export function getIngredientKeywords(recipe) {
   return out;
 }
 
-/**
- * Deterministic index/seed from recipe properties for curated selection.
- */
+/** INTERNAL: compute deterministic seed from recipe props */
 function computeSeed(recipe) {
   const str = [
     recipe?.id || "",
@@ -356,84 +154,51 @@ function computeSeed(recipe) {
     recipe?.category || "",
     recipe?.cuisine || "",
   ].join("|");
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
-  }
-  return hash;
+  return simpleHash(str);
 }
 
-/**
- * INTERNAL: deterministic pick from an array given a seed/index
- */
-function pickDeterministic(arr, seed, offset = 0) {
-  if (!arr?.length) return null;
-  const idx = Math.abs((seed + offset) >>> 0) % arr.length;
-  return arr[idx];
+/** INTERNAL: pick local food index deterministically with optional offset */
+function pickIndex(seed, offset = 0) {
+  const n = FOOD_ASSETS.length;
+  return Math.abs((seed + offset) >>> 0) % n;
 }
 
 /**
  * PUBLIC_INTERFACE
- * Select a curated food image URL for a recipe using ingredient-aware keywords.
- * Deterministic choice using recipe.id seed or optional indexHint.
+ * Select a local food image URL for a recipe using deterministic mapping.
+ * Note: Local assets must not be mutated with cache-busting.
  */
 export function selectFoodImageForRecipe(recipe, indexHint) {
   const seed = (indexHint != null ? Number(indexHint) : computeSeed(recipe)) >>> 0;
-  const keywords = getIngredientKeywords(recipe);
-
-  // Priority: ingredients-derived keywords (first), then category/cuisine/title-derived pushed later
-  for (let i = 0; i < keywords.length; i++) {
-    const k = keywords[i];
-    const list = curatedFoodImageMap[k];
-    if (list && list.length) {
-      const chosen = pickDeterministic(list, seed, i); // i as offset improves variability
-      if (chosen) {
-        const sep = chosen.includes("?") ? "&" : "?";
-        const rid = encodeURIComponent(String(recipe?.id || "unknown"));
-        const buildSeed = String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true" ? "1" : "";
-        return `${chosen}${sep}rid=${rid}${buildSeed ? `&v=${buildSeed}` : ""}`;
-      }
-    }
-  }
-
-  // Fallback to global whitelist deterministic selection
-  const chosen = pickDeterministic(CURATED_FOOD_WHITELIST, seed, 0) || CURATED_FOOD_WHITELIST[0];
-  const sep = chosen.includes("?") ? "&" : "?";
-  const rid = encodeURIComponent(String(recipe?.id || "unknown"));
-  const buildSeed = String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true" ? "1" : "";
-  return `${chosen}${sep}rid=${rid}${buildSeed ? `&v=${buildSeed}` : ""}`;
+  // Use keywords to vary offset to reduce collisions across similar IDs
+  const kws = getIngredientKeywords(recipe);
+  const kwHash = simpleHash(kws.join(",")); // stable based on content
+  const idx = pickIndex(seed ^ kwHash, 0);
+  return FOOD_ASSETS[idx];
 }
 
 /**
  * PUBLIC_INTERFACE
- * Returns a guaranteed placeholder CDN food image URL by deterministic index (whitelist only).
+ * Returns a guaranteed local placeholder (not cache-busted).
  */
-export function getStrictFoodFallback(width = 1200, height = 675, idIndex = 0) {
-  const idx = Math.abs(Number(idIndex || 0)) % CURATED_FOOD_WHITELIST.length;
-  const base = CURATED_FOOD_WHITELIST[idx];
-  const seed = String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true" ? "1" : "";
-  const q = [`rid=${encodeURIComponent(String(idIndex))}`];
-  if (seed) q.push(`v=${seed}`);
-  const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}${q.join("&")}`;
+export function getStrictFoodFallback(_width = 1200, _height = 675, _idIndex = 0) {
+  return "/assets/food/food-01.jpg";
 }
 
 /**
  * PUBLIC_INTERFACE
- * Build a deterministic, food-only image URL using ingredient-aware selection as primary.
+ * Build a deterministic local food image URL.
  */
 export function buildFoodImageUrl(recipe) {
-  if (!recipe) {
-    return getStrictFoodFallback(1200, 675, 0);
-  }
+  if (!recipe) return FOOD_ASSETS[0];
   return selectFoodImageForRecipe(recipe);
 }
 
 /**
  * PUBLIC_INTERFACE
  * Decide best food image URL for a recipe:
- * - If recipe.imageUrl exists, return it (later normalization by consumer).
- * - Otherwise compute using ingredient-aware selection.
+ * - If recipe.imageUrl exists, return it (should already be local in mock mode).
+ * - Otherwise compute using deterministic local selection.
  */
 export function resolveFoodImageUrl(recipe) {
   const src = recipe?.imageUrl;
@@ -443,16 +208,18 @@ export function resolveFoodImageUrl(recipe) {
 
 /**
  * PUBLIC_INTERFACE
- * Compute a deterministic fallback chain for a given recipe:
- * 1) Primary curated URL (ingredient-aware deterministic)
- * 2) Alternate curated URL (next deterministic index)
+ * Compute a deterministic fallback chain for a given recipe (local-only):
+ * 1) Primary local curated
+ * 2) Alternate local curated (next index)
  * 3) Local placeholder asset (/assets/food-placeholder.jpg)
  */
 export function deterministicFallbacks(recipeOrId) {
   const rec = typeof recipeOrId === "string" ? { id: recipeOrId, title: "", category: "", cuisine: "" } : (recipeOrId || {});
-  const primary = selectFoodImageForRecipe(rec, 0);
-  // Alternate: shift indexHint by +1 to pick a different URL deterministically
-  const curated = selectFoodImageForRecipe(rec, 1);
+  const seed = computeSeed(rec);
+  const idx1 = pickIndex(seed, 0);
+  const idx2 = pickIndex(seed, 1);
+  const primary = FOOD_ASSETS[idx1];
+  const curated = FOOD_ASSETS[idx2];
   return {
     primary,
     curated,

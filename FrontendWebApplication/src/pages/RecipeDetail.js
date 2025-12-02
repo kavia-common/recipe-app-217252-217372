@@ -5,7 +5,7 @@ import Loading from "../components/Loading";
 import ErrorMessage from "../components/ErrorMessage";
 import { AuthContext } from "../context/AuthContext";
 import { normalizeImageUrl } from "../components/RecipeCard";
-import { resolveFoodImageUrl, getStrictFoodFallback, deterministicFallbacks } from "../mocks/imageUtil";
+import { resolveFoodImageUrl, deterministicFallbacks } from "../mocks/imageUtil";
 
 // PUBLIC_INTERFACE
 export default function RecipeDetail() {
@@ -24,8 +24,7 @@ export default function RecipeDetail() {
 
   const initialHero = useMemo(() => {
     if (!recipe) return "/assets/food-placeholder.jpg";
-    // Primary = curated deterministic URL or explicit imageUrl if present
-    const base = resolveFoodImageUrl(recipe) || getStrictFoodFallback(1200, 675, recipe.id || id);
+    const base = resolveFoodImageUrl(recipe);
     return normalizeImageUrl(base, recipe.id || id) || "/assets/food-placeholder.jpg";
   }, [recipe, id]);
 

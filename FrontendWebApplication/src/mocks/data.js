@@ -1,8 +1,8 @@
 import { selectFoodImageForRecipe } from "./imageUtil";
 /**
  * Representative mock datasets for recipes and categories used in mock mode.
- * Uses deterministic curated URLs for reliable, food-only preview images chosen by ingredient-aware mapping.
- * Stable per-recipe cache-busting helpers live in imageUtil/consumers.
+ * Uses deterministic LOCAL food assets for reliable preview images.
+ * No external image hosts are referenced. Local assets are not cache-busted.
  */
 
 // PUBLIC_INTERFACE
@@ -26,7 +26,7 @@ function daysAgo(n) {
   return d.toISOString();
 }
 
-// Base recipes (IDs are stable). Do not include imageUrl in base; it will be assigned via ingredient-aware selection.
+// Base recipes (IDs are stable). Do not include remote imageUrl; it will be assigned via local selection.
 const baseRecipesRaw = [
   {
     id: "r-1",
@@ -674,7 +674,7 @@ const baseRecipesRaw = [
   },
 ];
 
-// Compute final image URLs using ingredient-aware selector for all recipes
+ // Compute final image URLs using local deterministic selector for all recipes
 const baseRecipes = baseRecipesRaw.map((r, idx) => ({
   ...r,
   imageUrl: selectFoodImageForRecipe(r, idx),

@@ -48,30 +48,30 @@ When `REACT_APP_USE_MOCK_API=true`:
 - Feedback and profile actions stub success and update local mock profile.
 - Header shows a small “Mock Mode” badge and the health indicator reads “API: Mocked.”
 - Diagnostics page indicates mock mode and does not perform real network requests.
-- Mock images are guaranteed unique per recipe and reliably load in previews thanks to an ingredient-aware curated, food-only image set:
-  - Primary: deterministic curated URL chosen by analyzing a recipe’s ingredients, category, cuisine, and title, mapped against a curated keyword→URL list.
-  - Fallback1: alternate curated URL computed via the next deterministic index (ensures a different image/host where possible).
+- Mock images now use bundled, local food assets to guarantee reliability in preview environments:
+  - Primary: deterministic local URL selected from `/assets/food/food-01.jpg` … `/assets/food/food-12.jpg` by hashing recipe id/category/cuisine/title along with ingredient-derived keywords.
+  - Fallback1: alternate local image computed using the next deterministic index.
   - Fallback2: bundled local placeholder at `/assets/food-placeholder.jpg`.
-  - Stable per-recipe cache-busting param: `?rid=<recipe-id>` and optional build seed `&v=1` when `REACT_APP_IMAGE_CACHE_BUST=true`.
-  - Local assets are not modified by cache-busting to preserve caching semantics.
-- No generic/landscape/random sources (e.g., picsum) are used in mock mode to guarantee food-only visuals.
+  - Local assets are never cache-busted, ensuring correct caching semantics.
+- All external image hosts (Unsplash/picsum/CDN) are removed from mock mode to ensure food-only local images.
 
 To disable mock mode, remove the env variable or set it to `false`.
 
-### Customizing the curated image set
+### Customizing the local image set
 
-Ingredient-aware images live in `src/mocks/imageUtil.js`:
+Ingredient-aware logic lives in `src/mocks/imageUtil.js`:
 
-- PUBLIC_INTERFACE getIngredientKeywords(recipe): Extracts normalized keywords like `['chicken','garlic','pasta','salad','curry','soup','taco','pizza','beef','vegan','dessert','pancake','tofu','shrimp']` from ingredients, category, cuisine, and title.
-- curatedFoodImageMap: Maps these keywords (ingredients/categories/cuisines) to one or more hand-picked, food-only CDN URLs.
-- PUBLIC_INTERFACE selectFoodImageForRecipe(recipe, indexHint): Chooses the best image deterministically based on extracted keywords; uses recipe.id hash or indexHint to pick a stable URL; appends `?rid=<id>` (and `&v=1` when enabled).
-- PUBLIC_INTERFACE deterministicFallbacks(recipe): Provides a three-stage fallback chain: primary curated URL → alternate curated URL → local `/assets/food-placeholder.jpg`.
+- PUBLIC_INTERFACE getIngredientKeywords(recipe): Extracts normalized keywords from ingredients, category, cuisine, and title.
+- PUBLIC_INTERFACE selectFoodImageForRecipe(recipe, indexHint): Chooses a local image deterministically; maps stable recipe hash/keywords to an index in the 12-image set.
+- PUBLIC_INTERFACE deterministicFallbacks(recipe): Provides the three-stage local fallback chain.
 
-To expand the curated map:
-- Edit `curatedFoodImageMap` inside `src/mocks/imageUtil.js` to add or adjust keyword arrays.
-- Prefer food-only images around 1200x675 for best quality.
-- Use hotlink-friendly sources (e.g., Cloudinary demo, jsDelivr-hosted static images).
-- Avoid non-food or random generators.
+To replace bundled images with your own:
+1) Put 12 distinct food images at:
+   - `public/assets/food/food-01.jpg` through `food-12.jpg`
+2) Ensure they are reasonably sized and visually distinct.
+3) No code changes are required if filenames follow the above convention.
+
+Tip: If you need more images, you can extend the `FOOD_ASSETS` array in `src/mocks/imageUtil.js` to include additional local files.
 
 ## Getting Started
 
