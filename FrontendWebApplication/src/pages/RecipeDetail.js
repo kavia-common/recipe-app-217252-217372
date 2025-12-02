@@ -84,7 +84,7 @@ export default function RecipeDetail() {
   }
 
   function onHeroError() {
-    // Stage 1: alternate curated URL
+    // Stage 1: alternate curated URL (same-category group where possible)
     if (!triedFallback.current) {
       triedFallback.current = true;
       const next = fb.curated;
@@ -93,10 +93,12 @@ export default function RecipeDetail() {
         return;
       }
     }
-    // Stage 2: local placeholder
+    // Stage 2: local placeholder; guard against loops
     if (!finalTried) {
       setFinalTried(true);
-      setHeroSrc("/assets/food-placeholder.jpg");
+      if (heroSrc !== "/assets/food-placeholder.jpg") {
+        setHeroSrc("/assets/food-placeholder.jpg");
+      }
     }
   }
 

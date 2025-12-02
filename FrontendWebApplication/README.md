@@ -13,21 +13,24 @@ A responsive and accessible React UI for browsing, filtering, and viewing recipe
 - Mock mode (no-backend preview): all API calls are served from in-app mocks
 - Favorites in Mock Mode are persisted to localStorage under key `favorites` and work end-to-end without a backend
 
-### Mock Mode Images (Category-specific local assets)
-Mock Mode now shows strictly local, category-aware images:
-- Primary: a deterministic local image selected per recipe via category-to-image mapping. If a category has multiple images, the recipe id hash selects a stable index.
-- Cuisine fallback: when a category mapping is missing, cuisine is mapped to relevant categories (e.g., Italian → Pasta/Pizza; Mexican → Tacos; Indian → Curry; Japanese → Sushi/Ramen; Chinese → Stir-fry).
-- Final fallback: a deterministic pick from the general pool, followed by `/assets/food-placeholder.jpg` if needed.
+### Mock Mode Images (Local, category & ingredient aware, unique per recipe)
+Mock Mode uses strictly local food images and assigns them deterministically:
+- Primary: category group pick using a stable hash of `recipe.id` → no duplicates within a category until its pool is cycled.
+- Secondary: another image within the same category group (when available) to avoid flicker and loops.
+- Cuisine fallback: maps cuisines to relevant category groups (e.g., Italian → Pasta/Pizza; Mexican → Tacos; Indian → Curry).
+- Ingredient-aware nudge: ingredients/title keywords can influence category group choice when category is missing.
+- General pool fallback: stable spread across the expanded local pool (24 images).
+- Final: bundled local placeholder `/assets/food-placeholder.jpg`.
 
 Files and customization:
 - Mapping lives in `src/mocks/imageUtil.js`:
-  - PUBLIC_INTERFACE selectCategoryImagePath(recipe): returns `/assets/food/food-XX.jpg` deterministically.
-  - CATEGORY_IMAGE_MAP: edit to assign which local images each category should use.
-  - CUISINE_TO_CATEGORY: edit to route cuisines to category sets.
-- Local assets must be placed under `public/assets/food/food-01.jpg` … `food-12.jpg`. Do not use remote CDNs.
-- Components keep a two-stage fallback chain: primary category image → alternate curated local image → `/assets/food-placeholder.jpg`.
+  - PUBLIC_INTERFACE selectCategoryImagePath(recipe): returns `/assets/food/food-XX.jpg` deterministically per recipe.
+  - CAT_GROUPS: category groups mapped to indices in the expanded pool (edit to your preference).
+  - CUISINE_TO_CATEGORY: routes cuisines to category groups.
+- Local assets: `public/assets/food/food-01.jpg` … `food-24.jpg` (provide at least 12; 24 recommended). No external CDNs.
+- Components implement a three-stage fallback: primary → same-group alternate → placeholder, and they guard against infinite onError loops.
 
-Note: Local image URLs never get cache busters.
+Note: Local image URLs never get cache busters and remain stable between reloads for preview reliability.
 >>>>>>> REPLACE   
 ````   
 ````edit file="recipe-app-217252-217372/FrontendWebApplication/README.md"      

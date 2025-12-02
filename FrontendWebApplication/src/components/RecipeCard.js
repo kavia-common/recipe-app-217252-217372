@@ -62,6 +62,7 @@ export default function RecipeCard({ recipe, onClick }) {
   const [finalTried, setFinalTried] = useState(false);
 
   function onImgError() {
+    // Stage 1: try curated alternate (prefer same-category group as provided by deterministicFallbacks)
     if (!triedFallback.current) {
       triedFallback.current = true;
       const next = fallbacks.curated;
@@ -70,9 +71,12 @@ export default function RecipeCard({ recipe, onClick }) {
         return;
       }
     }
+    // Stage 2: final local placeholder; guard against loops
     if (!finalTried) {
       setFinalTried(true);
-      setSrc("/assets/food-placeholder.jpg");
+      if (src !== "/assets/food-placeholder.jpg") {
+        setSrc("/assets/food-placeholder.jpg");
+      }
     }
   }
 
