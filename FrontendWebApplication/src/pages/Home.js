@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 
 // PUBLIC_INTERFACE
 export default function Home() {
-  /** Home page with featured, trending, and new sections. */
+  /** Home page with featured, trending, and new sections, plus quick top-level category chips. */
   const [featured, setFeatured] = useState([]);
   const [trending, setTrending] = useState([]);
   const [newest, setNewest] = useState([]);
@@ -43,11 +43,35 @@ export default function Home() {
     navigate(`/recipes/${encodeURIComponent(r.id)}`);
   }
 
+  function goCategory(cat) {
+    const qs = new URLSearchParams();
+    qs.set("category", cat);
+    navigate({ pathname: "/recipes", search: `?${qs.toString()}` });
+  }
+
   if (loading) return <Loading label="Loading recipes..." />;
   if (err) return <ErrorMessage error={err} />;
 
   return (
     <main className="container" role="main">
+      {/* Quick category chips */}
+      <section aria-labelledby="quick-cats" style={{ padding: "16px" }}>
+        <h2 id="quick-cats" style={{ marginTop: 0 }}>Explore by Category</h2>
+        <div role="group" aria-label="Top-level category" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {["Veg", "Non-Veg", "Snacks", "Desserts"].map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => goCategory(c)}
+              aria-label={`Browse ${c}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section aria-labelledby="featured-title">
         <h2 id="featured-title" style={{ padding: "16px" }}>Featured</h2>
         <RecipeGrid recipes={featured} onSelect={onSelect} />

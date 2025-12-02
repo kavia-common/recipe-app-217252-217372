@@ -126,7 +126,13 @@ export const MockApi = {
 
     // Apply filters
     if (category) {
-      base = base.filter((r) => (r.category || "").toLowerCase() === String(category).toLowerCase());
+      const cat = String(category).trim();
+      const tlc = ["veg", "non-veg", "snacks", "desserts"];
+      if (tlc.includes(cat.toLowerCase())) {
+        base = base.filter((r) => (r.topLevelCategory || "").toLowerCase() === cat.toLowerCase());
+      } else {
+        base = base.filter((r) => (r.category || "").toLowerCase() === cat.toLowerCase());
+      }
     }
     if (cuisine) {
       base = base.filter((r) => (r.cuisine || "").toLowerCase().includes(String(cuisine).toLowerCase()));
@@ -157,10 +163,12 @@ export const MockApi = {
         const desc = String(r.description || "").toLowerCase();
         const cat = String(r.category || "").toLowerCase();
         const ings = (r.ingredients || []).map((i) => String(i || "").toLowerCase());
+        const tlc = String(r.topLevelCategory || "").toLowerCase();
         return (
           title.includes(query) ||
           desc.includes(query) ||
           cat.includes(query) ||
+          tlc.includes(query) ||
           ings.some((i) => i.includes(query))
         );
       });

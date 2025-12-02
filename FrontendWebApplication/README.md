@@ -166,7 +166,30 @@ Mock Mode vs Live Backend:
 - JWT is stored in memory and persisted to localStorage as `auth_token`.
 - Authorization is attached automatically via `Authorization: Bearer <token>`.
 - If the backend is unavailable, the app handles errors gracefully and shows health status in the header.
-- In mock mode, requests are served from in-app mocks and no network is used. Admin edits/deletes are persisted locally.
+- In mock mode, requests are served from in-app mocks and no network is used.
+
+## Top-level Categories (Veg, Non-Veg, Snacks, Desserts)
+
+The UI exposes new top-level categories in multiple places:
+- Quick chips on Home and in the Filters component (keyboard focusable, aria-pressed reflects selection).
+- Category select dropdown also includes these values.
+- Selection is clearable.
+
+Behavior:
+- Selecting a top-level category sets the query param `category=<value>` and triggers a fetch to GET /recipes with that param.
+- No backend changes are required; the value is passed through as-is to `/recipes?category=<value>`.
+
+Mock Mode mapping:
+- Each recipe is assigned a derived `topLevelCategory` field based on ingredients/title/category heuristics:
+  - Non-Veg: presence of meats/seafood/egg.
+  - Desserts: dessert-like keywords in title/category.
+  - Snacks: snack-like keywords in title/category.
+  - Veg: default otherwise.
+- When `category` matches one of the top-level values, mock filtering uses `recipe.topLevelCategory` instead of `recipe.category`.
+- Free-text search (q) includes `topLevelCategory` matches as well.
+
+Diagnostics:
+- The Diagnostics page includes quick buttons to test `/recipes` with `category=Veg|Non-Veg|Snacks|Desserts`, showing the final request and counts. Admin edits/deletes are persisted locally.
 =======
 ## Favorites
 

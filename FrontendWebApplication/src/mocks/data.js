@@ -19,6 +19,27 @@ export const mockCategories = [
   { id: "cat-salad", name: "Salad" },
 ];
 
+// Utility: derive top-level category from recipe hints
+function deriveTopLevelCategory(r) {
+  const norm = (s) => String(s || "").toLowerCase();
+  const title = norm(r.title);
+  const cat = norm(r.category);
+  const ings = (r.ingredients || []).map((i) => norm(i));
+  // Desserts
+  const dessertHints = ["dessert", "cake", "brownie", "cookie", "muffin", "sweet", "ice cream", "pudding"];
+  if (dessertHints.some((h) => title.includes(h) || cat.includes(h))) return "Desserts";
+  // Snacks
+  const snackHints = ["snack", "taco", "tacos", "chips", "wrap", "sandwich", "burger", "bites", "finger"];
+  if (snackHints.some((h) => title.includes(h) || cat.includes(h))) return "Snacks";
+  // Non-Veg if any meat/seafood present
+  const nonVegTokens = ["chicken", "beef", "pork", "lamb", "shrimp", "prawn", "fish", "salmon", "tuna", "egg", "eggs", "bacon", "ham"];
+  if (ings.some((i) => nonVegTokens.some((t) => i.includes(t)))) return "Non-Veg";
+  if (/(chicken|beef|pork|lamb|shrimp|prawn|fish|salmon|tuna|egg|bacon|ham)/.test(title)) return "Non-Veg";
+  if (/(chicken|beef|pork|lamb|shrimp|prawn|fish|salmon|tuna|egg|bacon|ham)/.test(cat)) return "Non-Veg";
+  // Veg (default when likely vegetarian/vegan)
+  return "Veg";
+}
+
 function daysAgo(n) {
   const d = new Date();
   d.setDate(d.getDate() - n);
@@ -29,11 +50,12 @@ function daysAgo(n) {
 const baseRecipesRaw = [/* unchanged dataset as above */];
 
 // Compute final image URLs using category-aware local selector for all recipes.
-// This guarantees stable, local-only images and allows category edits to remap automatically.
-const baseRecipes = baseRecipesRaw.map((r, idx) => ({
-  ...r,
-  imageUrl: selectCategoryImagePath(r) || selectCategoryImagePath({ ...r, id: `${r.id}-${idx}` }),
-}));
+// Also assign a derived top-level category field for mock filtering.
+const baseRecipes = baseRecipesRaw.map((r, idx) => {
+  const imageUrl = selectCategoryImagePath(r) || selectCategoryImagePath({ ...r, id: `${r.id}-${idx}` });
+  const top = deriveTopLevelCategory(r);
+  return { ...r, imageUrl, topLevelCategory: top };
+});
 
 // PUBLIC_INTERFACE
 export function getMockRecipes({
@@ -46,10 +68,19 @@ export function getMockRecipes({
 } = {}) {
   let out = [...baseRecipes];
 
-  if (category) {
-    out = out.filter(
-      (r) => (r.category || "").toLowerCase() === String(category).toLowerCase()
-    );
+  const cat = String(category || "").trim();
+
+  if (cat) {
+    // If category is one of top-level, filter by derived field
+    const tlc = ["veg", "non-veg", "snacks", "desserts"];
+    if (tlc.includes(cat.toLowerCase())) {
+      out = out.filter((r) => (r.topLevelCategory || "").toLowerCase() === cat.toLowerCase());
+    } else {
+      // Otherwise, standard category equals matching
+      out = out.filter(
+        (r) => (r.category || "").toLowerCase() === cat.toLowerCase()
+      );
+    }
   }
   if (cuisine) {
     out = out.filter((r) =>

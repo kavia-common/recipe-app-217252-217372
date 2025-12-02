@@ -165,7 +165,7 @@ export default function Diagnostics() {
         <div style={{ marginBottom: 12 }}>
           <form onSubmit={(e) => { e.preventDefault(); /* retrigger effect */ setResults((r) => ({ ...r, recipes: { status: "pending" }, recipeById: { status: "skipped" } })); }}>
             <label htmlFor="diag-q">Quick test for /recipes with q</label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <input
                 id="diag-q"
                 type="search"
@@ -178,8 +178,6 @@ export default function Diagnostics() {
               <button className="btn" type="button" onClick={() => {
                 // re-run checks with current q
                 setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" } });
-                // trigger effect by toggling local state dependency through setTestQ (already set)
-                // We rely on useEffect dependencies: adding testQ below to rerun
               }}>
                 Run test
               </button>
@@ -190,6 +188,49 @@ export default function Diagnostics() {
               )}
             </div>
           </form>
+
+          {/* Quick buttons to test top-level categories via category query param */}
+          <div role="group" aria-label="Test category parameter" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            {["Veg", "Non-Veg", "Snacks", "Desserts"].map((c) => (
+              <button
+                key={c}
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => {
+                  // Trigger a fetch with category set; we reuse Api.listRecipes in effect: set testQ to a unique token and back to re-run
+                  // Instead we run inline here for clarity and update lastRequestInfo/results
+                  setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" } });
+                  (async () => {
+                    try {
+                      const list = await Api.listRecipes({ category: c });
+                      setResults((prev) => ({ ...prev, recipes: { status: "ok", count: Array.isArray(list) ? list.length : 0 } }));
+                      const qs = new URLSearchParams();
+                      qs.set("category", c);
+                      const mocked = isMockEnabled();
+                      const base = mocked ? "(mocked)" : getApiBase();
+                      const finalUrl = mocked ? `/recipes?${qs.toString()}` : `${(getApiBase() || "").replace(/\/+$/, "")}/recipes?${qs.toString()}`;
+                      setLastRequestInfo({ url: finalUrl, params: { category: c }, mocked, base });
+                      if (Array.isArray(list) && list.length > 0) {
+                        const id = list[0].id;
+                        try {
+                          const detail = await Api.getRecipe(id);
+                          setResults((prev) => ({ ...prev, recipeById: { status: "ok", id, title: detail?.title || "" } }));
+                        } catch (e) {
+                          setResults((prev) => ({ ...prev, recipeById: { status: "error", id, message: e?.message || "Error" } }));
+                        }
+                      }
+                    } catch (e) {
+                      setResults((prev) => ({ ...prev, recipes: { status: "error", message: e?.message || "Error", url: e?.url, details: e?.payload } }));
+                    }
+                  })();
+                }}
+                aria-label={`Run /recipes with category=${c}`}
+              >
+                category={c}
+              </button>
+            ))}
+          </div>
+
           {lastRequestInfo && (
             <div style={{ marginTop: 8, fontSize: "0.9rem" }}>
               <div><strong>Request:</strong> <code>{lastRequestInfo.url}</code></div>
