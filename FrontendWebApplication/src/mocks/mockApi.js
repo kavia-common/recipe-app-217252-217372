@@ -1,8 +1,8 @@
 //
+//
 // Mock API implementation for no-backend preview mode.
 // This module mirrors src/api/client.js Api surface where required by the UI.
 //
-
 import { getMockRecipeById, getMockRecipes, mockCategories } from "./data";
 
 // Simulate latency to better reflect UX without network
@@ -25,11 +25,21 @@ export const MockApi = {
   login: async (email, _password) => {
     await maybeDelay();
     // Save performed by tokenStore in caller; here we return a fake token.
-    return { accessToken: "mock-token", expiresIn: 3600, user: { id: "u-1", username: email.split("@")[0], email, role: "user" } };
+    return {
+      accessToken: "mock-token",
+      expiresIn: 3600,
+      user: { id: "u-1", username: email.split("@")[0], email, role: "user" },
+    };
   },
   register: async (username, email, _password) => {
     await maybeDelay();
-    return { id: "u-1", username, email, role: "user", createdAt: new Date().toISOString() };
+    return {
+      id: "u-1",
+      username,
+      email,
+      role: "user",
+      createdAt: new Date().toISOString(),
+    };
   },
   logout: async () => {
     await maybeDelay();
@@ -44,11 +54,28 @@ export const MockApi = {
       if (raw) return JSON.parse(raw);
     } catch {}
     // default mock user
-    return { id: "u-1", username: "mockuser", email: "mock@example.com", role: "user" };
+    return {
+      id: "u-1",
+      username: "mockuser",
+      email: "mock@example.com",
+      role: "user",
+    };
   },
-  updateProfile: async (data) => {
+  updateProfile: async function (data) {
     await maybeDelay();
-    const current = (await this.getProfile?.()) || { id: "u-1", username: "mockuser", email: "mock@example.com", role: "user" };
+    // avoid using this in arrow context; read from localStorage explicitly
+    let current = null;
+    try {
+      const raw = localStorage.getItem("mock_user_profile");
+      current = raw ? JSON.parse(raw) : null;
+    } catch {}
+    current =
+      current || {
+        id: "u-1",
+        username: "mockuser",
+        email: "mock@example.com",
+        role: "user",
+      };
     const next = { ...current, ...data };
     try {
       localStorage.setItem("mock_user_profile", JSON.stringify(next));
@@ -65,7 +92,14 @@ export const MockApi = {
   /** Recipes */
   listRecipes: async (params = {}) => {
     await maybeDelay();
-    return getMockRecipes(params);
+    // Support optional pagination: page, pageSize; and filters: category, cuisine, difficulty, sort
+    const { page, pageSize, ...filters } = params || {};
+    return getMockRecipes({
+      ...filters,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
+    // Note: The UI currently applies client-side pagination; this allows future server-side style too.
   },
   getRecipe: async (id) => {
     await maybeDelay();
@@ -94,13 +128,27 @@ export const MockApi = {
   /** Feedback */
   submitFeedback: async (_feedback) => {
     await maybeDelay();
-    return { id: `f-${Date.now()}`, message: "Thanks for your feedback!", createdAt: new Date().toISOString() };
+    return {
+      id: `f-${Date.now()}`,
+      message: "Thanks for your feedback!",
+      createdAt: new Date().toISOString(),
+    };
   },
   listFeedback: async () => {
     await maybeDelay();
     return [
-      { id: "f-1", userId: "u-1", message: "Loving the mock mode!", createdAt: new Date().toISOString() },
-      { id: "f-2", userId: "u-2", message: "Recipes look delicious.", createdAt: new Date(Date.now() - 864e5).toISOString() },
+      {
+        id: "f-1",
+        userId: "u-1",
+        message: "Loving the mock mode!",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "f-2",
+        userId: "u-2",
+        message: "Recipes look delicious.",
+        createdAt: new Date(Date.now() - 864e5).toISOString(),
+      },
     ];
   },
 };
@@ -111,7 +159,8 @@ export const MockApi = {
  */
 function computeMockMode() {
   // Primary: CRA build-time env
-  const envEnabled = String(process.env.REACT_APP_USE_MOCK_API || "").toLowerCase() === "true";
+  const envEnabled =
+    String(process.env.REACT_APP_USE_MOCK_API || "").toLowerCase() === "true";
 
   // Secondary: query param (useful in preview links): ?mock=true
   let queryEnabled = false;
@@ -127,7 +176,9 @@ function computeMockMode() {
   // Tertiary: localStorage override (sticky across refresh)
   let storedEnabled = false;
   try {
-    storedEnabled = String(localStorage.getItem("use_mock_api") || "").toLowerCase() === "true";
+    storedEnabled =
+      String(localStorage.getItem("use_mock_api") || "").toLowerCase() ===
+      "true";
   } catch {
     // ignore storage access
   }
