@@ -1,10 +1,8 @@
 import { buildFoodImageUrl } from "./imageUtil";
 /**
  * Representative mock datasets for recipes and categories used in mock mode.
- * This expanded dataset includes 20+ recipes spanning categories/cuisines/difficulties,
- * and deterministic fields used to power sorting: featured, trendingScore, createdAt.
- * Images: food-only URLs with stable cache-busting (?rid=<id>) and optional build seed (&v=1).
- * Image URLs are generated deterministically from recipe category/cuisine/title via src/mocks/imageUtil.js.
+ * Uses deterministic picsum or curated URLs for reliable preview images.
+ * Stable per-recipe cache-busting helpers live in imageUtil/consumers.
  */
 
 // PUBLIC_INTERFACE
@@ -28,14 +26,26 @@ function daysAgo(n) {
   return d.toISOString();
 }
 
-// Base recipes (IDs are stable)
-// imageUrl is intentionally null; we will compute a food-only deterministic URL later.
+/* Curated set to ensure some recipes use explicit static food images (hotlink friendly).
+   Others will be generated deterministically by buildFoodImageUrl. */
+const CURATED = {
+  "r-1": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pancakes.jpg",
+  "r-2": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pasta.jpg",
+  "r-5": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/avocado-toast.jpg",
+  "r-6": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/brownies.jpg",
+  "r-7": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/salad.jpg",
+  "r-10": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/tacos.jpg",
+  "r-13": "https://cdn.jsdelivr.net/gh/andrefsilva/food-demo-images@main/pizza.jpg",
+};
+
+ // Base recipes (IDs are stable)
+ // imageUrl for some is curated; otherwise deterministic later.
 const baseRecipesRaw = [
   {
     id: "r-1",
     title: "Classic Pancakes",
     description: "Fluffy pancakes perfect for a cozy morning.",
-    imageUrl: null,
+    imageUrl: CURATED["r-1"] || null,
     category: "Breakfast",
     cuisine: "American",
     difficulty: "easy",
@@ -63,7 +73,7 @@ const baseRecipesRaw = [
     id: "r-2",
     title: "Spaghetti Aglio e Olio",
     description: "Garlicky olive oil pasta finished with parsley and chili flakes.",
-    imageUrl: null,
+    imageUrl: CURATED["r-2"] || null,
     category: "Dinner",
     cuisine: "Italian",
     difficulty: "easy",
@@ -150,7 +160,7 @@ const baseRecipesRaw = [
     id: "r-5",
     title: "Avocado Toast",
     description: "Quick breakfast with creamy avocado and crunchy toast.",
-    imageUrl: null,
+    imageUrl: CURATED["r-5"] || null,
     category: "Breakfast",
     cuisine: "Modern",
     difficulty: "easy",
@@ -177,7 +187,7 @@ const baseRecipesRaw = [
     id: "r-6",
     title: "Chocolate Brownies",
     description: "Rich, fudgy brownies with a crackly top.",
-    imageUrl: null,
+    imageUrl: CURATED["r-6"] || null,
     category: "Dessert",
     cuisine: "American",
     difficulty: "medium",
@@ -205,7 +215,7 @@ const baseRecipesRaw = [
     id: "r-7",
     title: "Greek Salad",
     description: "Crisp cucumbers, tomatoes, olives, and feta with lemon-oregano dressing.",
-    imageUrl: null,
+    imageUrl: CURATED["r-7"] || null,
     category: "Salad",
     cuisine: "Greek",
     difficulty: "easy",
@@ -294,7 +304,7 @@ const baseRecipesRaw = [
     id: "r-10",
     title: "Beef Tacos",
     description: "Weeknight-friendly tacos with spiced beef and fresh toppings.",
-    imageUrl: null,
+    imageUrl: CURATED["r-10"] || null,
     category: "Dinner",
     cuisine: "Mexican",
     difficulty: "easy",
@@ -376,7 +386,7 @@ const baseRecipesRaw = [
     id: "r-13",
     title: "Margherita Pizza",
     description: "Classic pizza with tomato sauce, mozzarella, and basil.",
-    imageUrl: null,
+    imageUrl: CURATED["r-13"] || null,
     category: "Dinner",
     cuisine: "Italian",
     difficulty: "medium",
@@ -701,11 +711,13 @@ const baseRecipesRaw = [
   },
 ];
 
-// Compute final food-only image URLs deterministically using the helper.
-// Keep all fields and provide imageUrl for each entry.
+/* Compute final image URLs:
+   - If curated imageUrl is present use it
+   - Else generate deterministic picsum-based URL via buildFoodImageUrl
+*/
 const baseRecipes = baseRecipesRaw.map((r) => ({
   ...r,
-  imageUrl: buildFoodImageUrl(r),
+  imageUrl: r.imageUrl || buildFoodImageUrl(r),
 }));
 
 /**

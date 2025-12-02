@@ -1,52 +1,44 @@
-import React from "react";
+import React, { useMemo, useRef, useState } from "react";
 import "./recipe.css";
-import { resolveFoodImageUrl, getStrictFoodFallback } from "../mocks/imageUtil";
+import { resolveFoodImageUrl, getStrictFoodFallback, deterministicFallbacks } from "../mocks/imageUtil";
 
 /**
  * PUBLIC_INTERFACE
  * normalizeImageUrl ensures every image has a stable per-recipe cache-busting param.
- * - If input is falsy, provides a placeholder that also includes ?rid=<id>
- * - If input lacks ?rid, append ?rid=<id> (or &rid=) and optional &v=<seed> when enabled
- * Note: In mock mode, images are food-only via resolveFoodImageUrl; this function keeps cache-busting behavior.
+ * - For remote URLs: append ?rid=<id> and optional &v=<seed> (when enabled).
+ * - For local/static assets (/, ./, ../): DO NOT append cache-busting to avoid breaking caching.
  */
 export function normalizeImageUrl(imageUrl, id) {
-  /** Normalize/augment image URL with unique, stable cache-busting based on recipe id. */
+  /** Normalize/augment image URL with unique, stable cache-busting based on recipe id for remote URLs only. */
+  if (!imageUrl) return imageUrl;
+  const isLocal = imageUrl.startsWith("/") || imageUrl.startsWith("./") || imageUrl.startsWith("../");
+  if (isLocal) return imageUrl;
   const buildSeed =
     String(process.env.REACT_APP_IMAGE_CACHE_BUST || "true").toLowerCase() === "true"
       ? "1"
       : "";
   const rid = id ? String(id) : "unknown";
-  const ensureParams = (url) => {
-    try {
-      const hasQuery = url.includes("?");
-      const sep = hasQuery ? "&" : "?";
-      // only append rid if not present already
-      const hasRid = /[?&]rid=/.test(url);
-      const hasV = /[?&]v=/.test(url);
-      let next = url;
-      if (!hasRid) next += `${sep}rid=${encodeURIComponent(rid)}`;
-      if (buildSeed && !hasV) next += `${hasRid || hasQuery ? "&" : "?"}v=${buildSeed}`;
-      return next;
-    } catch {
-      // if URL parsing fails, return as-is
-      return url;
-    }
-  };
-
-  if (!imageUrl) {
-    return ensureParams(getStrictFoodFallback(1200, 675, id), rid);
+  try {
+    const hasQuery = imageUrl.includes("?");
+    const sep = hasQuery ? "&" : "?";
+    const hasRid = /[?&]rid=/.test(imageUrl);
+    const hasV = /[?&]v=/.test(imageUrl);
+    let next = imageUrl;
+    if (!hasRid) next += `${sep}rid=${encodeURIComponent(rid)}`;
+    if (buildSeed && !hasV) next += `${hasRid || hasQuery ? "&" : "?"}v=${buildSeed}`;
+    return next;
+  } catch {
+    return imageUrl;
   }
-  return ensureParams(imageUrl);
 }
 
 // PUBLIC_INTERFACE
 export default function RecipeCard({ recipe, onClick }) {
-  /** Accessible recipe card component. */
+  /** Accessible recipe card component with robust image fallbacks. */
   const {
     id,
     title,
     description,
-    imageUrl,
     category,
     cuisine,
     difficulty,
@@ -57,10 +49,33 @@ export default function RecipeCard({ recipe, onClick }) {
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
 
-  // Prefer explicit recipe.imageUrl if food-like/defined; otherwise compute deterministic food-only URL.
-  let src = resolveFoodImageUrl(recipe);
-  // As an extra guard, ensure stable rid/v additions
-  src = normalizeImageUrl(src, id);
+  const initialSrc = useMemo(() => {
+    const base = resolveFoodImageUrl(recipe);
+    return normalizeImageUrl(base || getStrictFoodFallback(1200, 675, id), id);
+  }, [recipe, id]);
+
+  const fallbacks = useMemo(() => deterministicFallbacks(recipe), [recipe]);
+  const triedFallback = useRef(false);
+  const [src, setSrc] = useState(initialSrc);
+  const [finalTried, setFinalTried] = useState(false);
+
+  function onImgError(e) {
+    // Stage 1: deterministic curated/picsum fallback (whichever is not current)
+    if (!triedFallback.current) {
+      triedFallback.current = true;
+      // choose curated fallback to avoid hitting the same failing host
+      const next = fallbacks.curated;
+      if (next && next !== src) {
+        setSrc(normalizeImageUrl(next, id));
+        return;
+      }
+    }
+    // Stage 2: local placeholder asset; ensure we don't loop
+    if (!finalTried) {
+      setFinalTried(true);
+      setSrc("/assets/food-placeholder.jpg");
+    }
+  }
 
   return (
     <article
@@ -75,6 +90,7 @@ export default function RecipeCard({ recipe, onClick }) {
           src={src}
           alt={title ? `${title} image` : "Recipe image"}
           loading="lazy"
+          onError={onImgError}
         />
         {isFeatured && <span className="badge">Featured</span>}
       </div>

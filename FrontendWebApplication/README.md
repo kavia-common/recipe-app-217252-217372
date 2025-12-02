@@ -47,10 +47,15 @@ When `REACT_APP_USE_MOCK_API=true`:
 - Feedback and profile actions stub success and update local mock profile.
 - Header shows a small “Mock Mode” badge and the health indicator reads “API: Mocked.”
 - Diagnostics page indicates mock mode and does not perform real network requests.
-- Mock images are guaranteed unique per recipe and update in previews thanks to:
-  - Stable per-recipe cache-busting param: `?rid=<recipe-id>`
-  - Optional build seed: `&v=1` when `REACT_APP_IMAGE_CACHE_BUST=true`
-  - Rendering uses a small utility to normalize image URLs if any custom URL is missing these params.
+- Mock images are guaranteed unique per recipe and reliably load in previews thanks to:
+  - Deterministic primary URLs using picsum.photos seeds per recipe (no API key required)
+  - Curated, hotlink-friendly CDN images for a subset of recipes
+  - Two-stage fallback in UI components:
+    1) primary imageUrl (explicit or generated),
+    2) deterministic curated fallback per recipe,
+    3) bundled local placeholder at `src/assets/food-placeholder.jpg`
+  - Stable per-recipe cache-busting param: `?rid=<recipe-id>` and optional build seed `&v=1` when `REACT_APP_IMAGE_CACHE_BUST=true`
+  - Local assets are not modified by cache-busting to preserve caching semantics.
 
 To disable mock mode, remove the env variable or set it to `false`.
 

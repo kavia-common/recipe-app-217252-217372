@@ -1,11 +1,11 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Api } from "../api/client";
 import Loading from "../components/Loading";
 import ErrorMessage from "../components/ErrorMessage";
 import { AuthContext } from "../context/AuthContext";
 import { normalizeImageUrl } from "../components/RecipeCard";
-import { resolveFoodImageUrl, getStrictFoodFallback } from "../mocks/imageUtil";
+import { resolveFoodImageUrl, getStrictFoodFallback, deterministicFallbacks } from "../mocks/imageUtil";
 
 // PUBLIC_INTERFACE
 export default function RecipeDetail() {
@@ -17,6 +17,28 @@ export default function RecipeDetail() {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+
+  // Precompute image-related hooks unconditionally to satisfy rules-of-hooks;
+  // We'll only use them in the render when recipe is available.
+  const initialHero = useMemo(() => {
+    if (!recipe) return "/assets/food-placeholder.jpg";
+    const base = resolveFoodImageUrl(recipe);
+    const n = normalizeImageUrl(base || getStrictFoodFallback(1200, 675, recipe.id || id), recipe.id || id);
+    return n || "/assets/food-placeholder.jpg";
+  }, [recipe, id]);
+
+  const fb = useMemo(() => deterministicFallbacks(recipe || { id }), [recipe, id]);
+  const triedFallback = useRef(false);
+  const [heroSrc, setHeroSrc] = useState(initialHero);
+  const [finalTried, setFinalTried] = useState(false);
+
+  // Keep heroSrc in sync when initialHero changes (e.g., after recipe loads)
+  useEffect(() => {
+    setHeroSrc(initialHero);
+    // reset fallbacks when new recipe arrives
+    triedFallback.current = false;
+    setFinalTried(false);
+  }, [initialHero]);
 
   useEffect(() => {
     let mounted = true;
@@ -40,17 +62,26 @@ export default function RecipeDetail() {
     }
   }
 
+  function onHeroError() {
+    if (!triedFallback.current) {
+      triedFallback.current = true;
+      const next = fb.curated;
+      if (next && next !== heroSrc) {
+        setHeroSrc(normalizeImageUrl(next, (recipe && recipe.id) || id));
+        return;
+      }
+    }
+    if (!finalTried) {
+      setFinalTried(true);
+      setHeroSrc("/assets/food-placeholder.jpg");
+    }
+  }
+
   if (loading) return <Loading label="Loading recipe..." />;
   if (err) return <ErrorMessage error={err} />;
   if (!recipe) return <p role="status">Recipe not found.</p>;
 
   const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
-  let hero = resolveFoodImageUrl(recipe);
-  // Ensure cache-busting normalization remains
-  let heroSrc = normalizeImageUrl(hero, recipe.id || id);
-  if (!heroSrc) {
-    heroSrc = normalizeImageUrl(getStrictFoodFallback(1200, 675, recipe.id || id), recipe.id || id);
-  }
 
   return (
     <main className="container" role="main" style={{ padding: 16 }}>
@@ -61,6 +92,7 @@ export default function RecipeDetail() {
           src={heroSrc}
           alt={recipe.title ? `${recipe.title} image` : "Recipe image"}
           style={{ width: "100%", maxWidth: 900, borderRadius: 12 }}
+          onError={onHeroError}
         />
         {recipe.description && <figcaption style={{ color: "#555" }}>{recipe.description}</figcaption>}
       </figure>
