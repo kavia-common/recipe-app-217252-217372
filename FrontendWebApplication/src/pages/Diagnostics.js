@@ -12,6 +12,21 @@ export default function Diagnostics() {
     recipeById: { status: "skipped" }, // will run if we find any id from list
   });
 
+  // Helper: toggle mock mode using localStorage override and reload
+  function setMockOverride(value) {
+    try {
+      if (value) {
+        localStorage.setItem("use_mock_api", "true");
+      } else {
+        localStorage.removeItem("use_mock_api");
+      }
+    } catch {
+      // ignore storage errors
+    }
+    // Ensure the new setting is applied on a fresh evaluation
+    window.location.reload();
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -103,11 +118,26 @@ export default function Diagnostics() {
         {mockInfo.enabled ? (
           <div role="note" style={{ padding: 12, background: "#fef3c7", color: "#92400e", borderRadius: 8 }}>
             Mock mode is active. All API calls are served from in-app mocks; no real network requests are made.
+            <div style={{ marginTop: 8 }}>
+              <button className="btn btn-secondary" type="button" onClick={() => setMockOverride(false)} aria-label="Disable mock mode">
+                Disable Mock Mode
+              </button>
+            </div>
           </div>
         ) : (
-          <p style={{ color: "#6b7280" }}>
-            To enable mock mode, set REACT_APP_USE_MOCK_API=true at build time, or add ?mock=true to the URL, or set localStorage.setItem("use_mock_api","true") in the browser console and reload.
-          </p>
+          <div style={{ color: "#6b7280" }}>
+            <p>
+              To enable mock mode, you can:
+            </p>
+            <ul>
+              <li>Set REACT_APP_USE_MOCK_API=true at build time, or</li>
+              <li>Add <code>?mock=true</code> to the URL and reload, or</li>
+              <li>Use the button below (stores local override in localStorage).</li>
+            </ul>
+            <button className="btn" type="button" onClick={() => setMockOverride(true)} aria-label="Enable mock mode">
+              Enable Mock Mode Now
+            </button>
+          </div>
         )}
       </section>
 
