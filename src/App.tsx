@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
+import Home from "./pages/Home";
 
 /**
  * PUBLIC_INTERFACE
@@ -12,14 +13,7 @@ import { Routes, Route, Link } from "react-router-dom";
 export default function App(): JSX.Element {
   return (
     <div className="app">
-      <header className="header" role="banner">
-        <h1>Recipe App</h1>
-        <nav aria-label="Primary" className="nav">
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-
+      <SiteHeader />
       <main className="main" role="main">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -35,15 +29,25 @@ export default function App(): JSX.Element {
   );
 }
 
-function Home(): JSX.Element {
+function SiteHeader(): JSX.Element {
   return (
-    <section>
-      <h2>Welcome</h2>
-      <p>
-        If you are seeing this, the preview is working and the app is rendering content. Replace this
-        with real recipe UI.
-      </p>
-    </section>
+    <header className="header" role="banner">
+      <div className="header__inner">
+        <h1 className="brand">
+          <Link to="/" className="brand__link">
+            Recipe App
+          </Link>
+        </h1>
+        <nav aria-label="Primary" className="nav">
+          <Link to="/" className="nav__link">
+            Home
+          </Link>
+          <Link to="/about" className="nav__link">
+            About
+          </Link>
+        </nav>
+      </div>
+    </header>
   );
 }
 
