@@ -13,15 +13,23 @@ export const AuthContext = createContext({
   register: async () => {},
   logout: async () => {},
   refreshProfile: async () => {},
+  // Favorites public API
+  favorites: [],
+  addFavorite: async (_id) => {},
+  removeFavorite: async (_id) => {},
+  toggleFavorite: async (_id) => {},
+  isFavorite: (_id) => false,
+  refreshFavorites: async () => {},
 });
 
 // PUBLIC_INTERFACE
 export function AuthProvider({ children }) {
-  /** Provides authentication and profile state to the application. */
+  /** Provides authentication, profile state, and favorites to the application. */
   const [user, setUser] = useState(null);
   const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState("checking");
+  const [favorites, setFavorites] = useState([]);
 
   // In mock mode, initialize a fake token if none exists
   useEffect(() => {
@@ -30,9 +38,14 @@ export function AuthProvider({ children }) {
       try {
         const existing = localStorage.getItem("mock_user_profile");
         if (!existing) {
-          localStorage.setItem("mock_user_profile", JSON.stringify({ id: "u-1", username: "mockuser", email: "mock@example.com", role: "user" }));
+          localStorage.setItem(
+            "mock_user_profile",
+            JSON.stringify({ id: "u-1", username: "mockuser", email: "mock@example.com", role: "user" })
+          );
         }
-      } catch {}
+      } catch {
+        // ignore storage errors
+      }
     }
   }, []);
 
@@ -61,29 +74,140 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    setLoading(true);
+  // localStorage helpers for mock/local fallback
+  const readLocalFavorites = () => {
     try {
-      const res = await Api.login(email, password);
-      await refreshProfile();
-      return res;
-    } finally {
-      setLoading(false);
+      const raw = localStorage.getItem("favorites");
+      const ids = raw ? JSON.parse(raw) : [];
+      return Array.isArray(ids) ? ids.map(String) : [];
+    } catch {
+      return [];
     }
-  }, [refreshProfile]);
+  };
+  const writeLocalFavorites = (ids) => {
+    try {
+      localStorage.setItem("favorites", JSON.stringify(Array.isArray(ids) ? ids : []));
+    } catch {
+      // ignore
+    }
+  };
 
-  const register = useCallback(async (username, email, password) => {
-    setLoading(true);
-    try {
-      const res = await Api.register(username, email, password);
-      // After register, try login automatically
-      await Api.login(email, password);
-      await refreshProfile();
-      return res;
-    } finally {
-      setLoading(false);
+  // PUBLIC_INTERFACE
+  const refreshFavorites = useCallback(async () => {
+    /** Load favorites from backend (if available) or localStorage. */
+    if (!tokenStore.get()) {
+      setFavorites([]);
+      return [];
     }
-  }, [refreshProfile]);
+    try {
+      const ids = await Api.getFavorites();
+      const safe = Array.isArray(ids) ? ids.map(String) : [];
+      setFavorites(safe);
+      writeLocalFavorites(safe);
+      return safe;
+    } catch {
+      const local = readLocalFavorites();
+      setFavorites(local);
+      return local;
+    }
+  }, []);
+
+  // PUBLIC_INTERFACE
+  const addFavorite = useCallback(async (id) => {
+    /** Add a recipe ID to favorites and persist appropriately. */
+    const rid = String(id);
+    setFavorites((prev) => {
+      const next = prev.includes(rid) ? prev : [...prev, rid];
+      writeLocalFavorites(next);
+      return next;
+    });
+    try {
+      await Api.addFavorite(rid);
+    } catch {
+      // ignore backend errors; local persisted
+    }
+  }, []);
+
+  // PUBLIC_INTERFACE
+  const removeFavorite = useCallback(async (id) => {
+    /** Remove a recipe ID from favorites and persist appropriately. */
+    const rid = String(id);
+    setFavorites((prev) => {
+      const next = prev.filter((x) => x !== rid);
+      writeLocalFavorites(next);
+      return next;
+    });
+    try {
+      await Api.removeFavorite(rid);
+    } catch {
+      // ignore backend errors; local persisted
+    }
+  }, []);
+
+  // PUBLIC_INTERFACE
+  const toggleFavorite = useCallback(
+    async (id) => {
+      /** Toggle a recipe ID in favorites. */
+      const rid = String(id);
+      setFavorites((prev) => {
+        const exists = prev.includes(rid);
+        const next = exists ? prev.filter((x) => x !== rid) : [...prev, rid];
+        writeLocalFavorites(next);
+        return next;
+      });
+      try {
+        if (favorites.includes(rid)) {
+          await Api.removeFavorite(rid);
+        } else {
+          await Api.addFavorite(rid);
+        }
+      } catch {
+        // ignore backend errors; local persisted
+      }
+    },
+    [favorites]
+  );
+
+  // PUBLIC_INTERFACE
+  const isFavorite = useCallback(
+    (id) => {
+      /** Returns true if the given recipe ID is marked as favorite. */
+      return favorites.includes(String(id));
+    },
+    [favorites]
+  );
+
+  const login = useCallback(
+    async (email, password) => {
+      setLoading(true);
+      try {
+        const res = await Api.login(email, password);
+        await refreshProfile();
+        await refreshFavorites();
+        return res;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshProfile, refreshFavorites]
+  );
+
+  const register = useCallback(
+    async (username, email, password) => {
+      setLoading(true);
+      try {
+        const res = await Api.register(username, email, password);
+        // After register, try login automatically
+        await Api.login(email, password);
+        await refreshProfile();
+        await refreshFavorites();
+        return res;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshProfile, refreshFavorites]
+  );
 
   const logout = useCallback(async () => {
     setLoading(true);
@@ -95,6 +219,7 @@ export function AuthProvider({ children }) {
       tokenStore.clear();
       setUser(null);
       setRole("user");
+      setFavorites([]);
       setLoading(false);
     }
   }, []);
@@ -106,7 +231,10 @@ export function AuthProvider({ children }) {
     if (isMockEnabled()) {
       setHealth("ok");
       refreshProfile();
-      return () => { mounted = false; };
+      refreshFavorites();
+      return () => {
+        mounted = false;
+      };
     }
 
     Api.health()
@@ -117,10 +245,11 @@ export function AuthProvider({ children }) {
         if (mounted) setHealth("unavailable");
       });
     refreshProfile();
+    refreshFavorites();
     return () => {
       mounted = false;
     };
-  }, [refreshProfile]);
+  }, [refreshProfile, refreshFavorites]);
 
   const value = useMemo(
     () => ({
@@ -133,8 +262,29 @@ export function AuthProvider({ children }) {
       register,
       logout,
       refreshProfile,
+      favorites,
+      addFavorite,
+      removeFavorite,
+      toggleFavorite,
+      isFavorite,
+      refreshFavorites,
     }),
-    [user, role, loading, health, login, register, logout, refreshProfile]
+    [
+      user,
+      role,
+      loading,
+      health,
+      login,
+      register,
+      logout,
+      refreshProfile,
+      favorites,
+      addFavorite,
+      removeFavorite,
+      toggleFavorite,
+      isFavorite,
+      refreshFavorites,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

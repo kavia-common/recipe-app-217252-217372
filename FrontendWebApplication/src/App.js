@@ -13,6 +13,7 @@ import Feedback from "./pages/Feedback";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Diagnostics from "./pages/Diagnostics";
+import Favorites from "./pages/Favorites";
 
 // PUBLIC_INTERFACE
 function App() {
@@ -63,9 +64,25 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/favorites"
+              element={
+                <ProtectedRoute>
+                  <Favorites />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/admin" element={<Admin />} />
             <Route path="/diagnostics" element={<Diagnostics />} />
-            <Route path="*" element={<main style={{ padding: 16 }}><h1>404</h1><p>Page not found</p></main>} />
+            <Route
+              path="*"
+              element={
+                <main style={{ padding: 16 }}>
+                  <h1>404</h1>
+                  <p>Page not found</p>
+                </main>
+              }
+            />
           </Routes>
         </Router>
       </AuthProvider>

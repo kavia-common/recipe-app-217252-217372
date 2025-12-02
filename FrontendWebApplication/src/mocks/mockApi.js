@@ -3,7 +3,7 @@
 // Mock API implementation for no-backend preview mode.
 // This module mirrors src/api/client.js Api surface where required by the UI.
 //
-import { getMockRecipeById, getMockRecipes, mockCategories, getAllMockRecipes } from "./data";
+import { getMockRecipeById, getMockRecipes, mockCategories } from "./data";
 
 // Simulate latency to better reflect UX without network
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -176,6 +176,42 @@ export const MockApi = {
         createdAt: new Date(Date.now() - 864e5).toISOString(),
       },
     ];
+  },
+
+  /** Favorites in Mock Mode: persisted in localStorage under 'favorites' (array of recipe IDs) */
+  getFavorites: async () => {
+    await maybeDelay();
+    try {
+      const raw = localStorage.getItem("favorites");
+      const ids = raw ? JSON.parse(raw) : [];
+      return Array.isArray(ids) ? ids : [];
+    } catch {
+      return [];
+    }
+  },
+  addFavorite: async (recipeId) => {
+    await maybeDelay();
+    try {
+      const raw = localStorage.getItem("favorites");
+      const ids = raw ? JSON.parse(raw) : [];
+      const next = Array.from(new Set([...(Array.isArray(ids) ? ids : []), String(recipeId)]));
+      localStorage.setItem("favorites", JSON.stringify(next));
+      return { ok: true };
+    } catch {
+      return { ok: false };
+    }
+  },
+  removeFavorite: async (recipeId) => {
+    await maybeDelay();
+    try {
+      const raw = localStorage.getItem("favorites");
+      const ids = raw ? JSON.parse(raw) : [];
+      const next = (Array.isArray(ids) ? ids : []).filter((id) => id !== String(recipeId));
+      localStorage.setItem("favorites", JSON.stringify(next));
+      return { ok: true };
+    } catch {
+      return { ok: false };
+    }
   },
 };
 

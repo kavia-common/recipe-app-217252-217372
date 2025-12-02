@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useContext, useMemo, useRef, useState } from "react";
 import "./recipe.css";
+import { AuthContext } from "../context/AuthContext";
 import { resolveFoodImageUrl, deterministicFallbacks } from "../mocks/imageUtil";
 
 /**
@@ -40,6 +41,13 @@ export default function RecipeCard({ recipe, onClick }) {
   } = recipe;
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
+
+  const { isAuthenticated, isFavorite, toggleFavorite } = useContext(AuthContext);
+  const favored = isAuthenticated ? isFavorite(id) : false;
+  const onFavClick = (e) => {
+    e.stopPropagation();
+    toggleFavorite(id);
+  };
 
   // Compute deterministic fallbacks once per recipe
   const fallbacks = useMemo(() => deterministicFallbacks(recipe), [recipe]);
@@ -84,6 +92,20 @@ export default function RecipeCard({ recipe, onClick }) {
           onError={onImgError}
         />
         {isFeatured && <span className="badge">Featured</span>}
+        {isAuthenticated && (
+          <button
+            type="button"
+            className="btn"
+            onClick={onFavClick}
+            aria-label={favored ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={favored}
+            title={favored ? "Remove from favorites" : "Add to favorites"}
+            style={{ position: "absolute", top: 8, right: 8, padding: "6px 8px" }}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {favored ? "❤️" : "🤍"}
+          </button>
+        )}
       </div>
       <div className="recipe-content">
         <h3 className="recipe-title">{title}</h3>

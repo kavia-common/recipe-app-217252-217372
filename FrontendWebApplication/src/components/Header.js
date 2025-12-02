@@ -110,6 +110,7 @@ export default function Header() {
           </span>
           {isAuthenticated ? (
             <>
+              <Link to="/favorites" className="nav-link">Favorites</Link>
               <Link to="/profile" className="nav-link">Profile</Link>
               <button className="btn" onClick={logout} aria-label="Logout">Logout</button>
             </>

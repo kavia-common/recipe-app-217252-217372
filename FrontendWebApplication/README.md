@@ -9,6 +9,63 @@ A responsive and accessible React UI for browsing, filtering, and viewing recipe
 - Recipe details with image, ingredients, steps, and badges
 - Auth: Register, Login, Logout, Profile view/update
 - Feedback submission (auth required) and admin feedback list
+- Favorites: save/unsave recipes and view your saved list (auth required)
+- Favorites: save/unsave recipes and view your saved list (auth required)
+>>>>>>> REPLACE   
+````   
+````edit file="recipe-app-217252-217372/FrontendWebApplication/README.md"      
+<<<<<<< SEARCH
+- Mock mode (no-backend preview): all API calls are served from in-app mocks
+- Favorites in Mock Mode are persisted to localStorage under key `favorites` and work end-to-end without a backend
+=======
+- Mock mode (no-backend preview): all API calls are served from in-app mocks
+- Favorites in Mock Mode are persisted to localStorage under key `favorites` and work end-to-end without a backend
+>>>>>>> REPLACE   
+````   
+````edit file="recipe-app-217252-217372/FrontendWebApplication/README.md"      
+<<<<<<< SEARCH
+- `/profile` Profile (protected)
+- `/favorites` Favorites (protected)
+=======
+- `/profile` Profile (protected)
+- `/favorites` Favorites (protected)
+>>>>>>> REPLACE   
+````   
+````edit file="recipe-app-217252-217372/FrontendWebApplication/README.md"      
+<<<<<<< SEARCH
+## Favorites
+
+Favorites let authenticated users save recipes they love:
+
+- Heart button on recipe cards and details toggles favorite state (keyboard accessible; aria-pressed reflects state).
+- Your Favorites page lists all saved recipes.
+
+Behavior:
+- Mock Mode: stored in localStorage (`favorites`) and available offline in preview.
+- Live Backend: will call API endpoints if available:
+  - GET /user/favorites
+  - POST /user/favorites { recipeId }
+  - DELETE /user/favorites/{recipeId }
+If these endpoints are unavailable, the UI falls back to localStorage gracefully.
+
+## Mock Mode (No-backend Preview)
+=======
+## Favorites
+
+Favorites let authenticated users save recipes they love:
+
+- Heart button on recipe cards and details toggles favorite state (keyboard accessible; aria-pressed reflects state).
+- Your Favorites page lists all saved recipes.
+
+Behavior:
+- Mock Mode: stored in localStorage (`favorites`) and available offline in preview.
+- Live Backend: will call API endpoints if available:
+  - GET /user/favorites
+  - POST /user/favorites { recipeId }
+  - DELETE /user/favorites/{recipeId }
+If these endpoints are unavailable, the UI falls back to localStorage gracefully.
+
+## Mock Mode (No-backend Preview)
 - Admin-only controls conditionally rendered (e.g., delete recipe button)
 - Central API client with bearer JWT handling and environment-driven base URL
 - Health check to `/health` for preview readiness

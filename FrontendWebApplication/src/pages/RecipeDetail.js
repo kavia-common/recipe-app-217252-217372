@@ -12,7 +12,14 @@ export default function RecipeDetail() {
   /** Detailed recipe view with admin actions conditionally rendered. */
   const { id } = useParams();
   const navigate = useNavigate();
-  const { role, isAuthenticated } = useContext(AuthContext);
+  const { role, isAuthenticated, isFavorite, toggleFavorite } = useContext(AuthContext);
+>>>>>>> REPLACE   
+````   
+````edit file="recipe-app-217252-217372/FrontendWebApplication/src/pages/RecipeDetail.js"      
+<<<<<<< SEARCH
+      <div style={{ display: \"flex\", alignItems: \"center\", gap: 12, marginTop: 12 }}>\n        <h1 style={{ margin: 0 }}>{recipe.title}</h1>\n        {isAuthenticated && (\n          <button\n            type=\"button\"\n            className=\"btn\"\n            onClick={() => toggleFavorite(recipe.id)}\n            aria-label={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            aria-pressed={isFavorite(recipe.id)}\n            title={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            style={{ padding: \"6px 8px\" }}\n          >\n            {isFavorite(recipe.id) ? \"❤️\" : \"🤍\"}\n          </button>\n        )}\n      </div>\n      <figure>
+=======
+      <div style={{ display: \"flex\", alignItems: \"center\", gap: 12, marginTop: 12 }}>\n        <h1 style={{ margin: 0 }}>{recipe.title}</h1>\n        {isAuthenticated && (\n          <button\n            type=\"button\"\n            className=\"btn\"\n            onClick={() => toggleFavorite(recipe.id)}\n            aria-label={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            aria-pressed={isFavorite(recipe.id)}\n            title={isFavorite(recipe.id) ? \"Remove from favorites\" : \"Add to favorites\"}\n            style={{ padding: \"6px 8px\" }}\n          >\n            {isFavorite(recipe.id) ? \"❤️\" : \"🤍\"}\n          </button>\n        )}\n      </div>\n      <figure>
 
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);

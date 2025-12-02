@@ -1,4 +1,4 @@
-import { MockApi, isMockEnabled as mockFlag, getMockModeInfo } from "../mocks/mockApi";
+import { MockApi, isMockEnabled as mockFlag } from "../mocks/mockApi";
 //
 // Centralized API client with JWT handling and environment-driven base URL
 //
@@ -317,5 +317,42 @@ export const Api = {
   listFeedback: (options = {}) => {
     if (mockFlag()) return MockApi.listFeedback();
     return apiFetch("/feedback", { auth: true, ...options });
+  },
+
+  /** Favorites (graceful no-op if backend lacks endpoints; mock uses localStorage) */
+  getFavorites: async () => {
+    if (mockFlag()) return MockApi.getFavorites();
+    try {
+      return await apiFetch("/user/favorites", { auth: true });
+    } catch (_e) {
+      // Graceful fallback to localStorage when endpoint not available
+      try {
+        const raw = localStorage.getItem("favorites");
+        const ids = raw ? JSON.parse(raw) : [];
+        return Array.isArray(ids) ? ids : [];
+      } catch {
+        return [];
+      }
+    }
+  },
+  addFavorite: async (recipeId) => {
+    if (mockFlag()) return MockApi.addFavorite(recipeId);
+    try {
+      await apiFetch("/user/favorites", { method: "POST", body: { recipeId }, auth: true });
+      return { ok: true };
+    } catch (_e) {
+      // fallback no-op
+      return { ok: false, fallback: true };
+    }
+  },
+  removeFavorite: async (recipeId) => {
+    if (mockFlag()) return MockApi.removeFavorite(recipeId);
+    try {
+      await apiFetch(`/user/favorites/${encodeURIComponent(recipeId)}`, { method: "DELETE", auth: true });
+      return { ok: true };
+    } catch (_e) {
+      // fallback no-op
+      return { ok: false, fallback: true };
+    }
   },
 };
