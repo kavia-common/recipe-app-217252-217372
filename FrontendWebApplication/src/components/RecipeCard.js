@@ -1,11 +1,13 @@
 import React from "react";
 import "./recipe.css";
+import { resolveFoodImageUrl, getStrictFoodFallback } from "../mocks/imageUtil";
 
 /**
  * PUBLIC_INTERFACE
  * normalizeImageUrl ensures every image has a stable per-recipe cache-busting param.
  * - If input is falsy, provides a placeholder that also includes ?rid=<id>
  * - If input lacks ?rid, append ?rid=<id> (or &rid=) and optional &v=<seed> when enabled
+ * Note: In mock mode, images are food-only via resolveFoodImageUrl; this function keeps cache-busting behavior.
  */
 export function normalizeImageUrl(imageUrl, id) {
   /** Normalize/augment image URL with unique, stable cache-busting based on recipe id. */
@@ -32,11 +34,7 @@ export function normalizeImageUrl(imageUrl, id) {
   };
 
   if (!imageUrl) {
-    // unique placeholder per id
-    const placeholder = `https://picsum.photos/seed/${encodeURIComponent(
-      rid
-    )}/1200/675?text=${encodeURIComponent("Recipe")}`;
-    return ensureParams(placeholder);
+    return ensureParams(getStrictFoodFallback(1200, 675, id), rid);
   }
   return ensureParams(imageUrl);
 }
@@ -58,7 +56,11 @@ export default function RecipeCard({ recipe, onClick }) {
   } = recipe;
 
   const totalTime = (prepTime || 0) + (cookTime || 0);
-  const src = normalizeImageUrl(imageUrl, id);
+
+  // Prefer explicit recipe.imageUrl if food-like/defined; otherwise compute deterministic food-only URL.
+  let src = resolveFoodImageUrl(recipe);
+  // As an extra guard, ensure stable rid/v additions
+  src = normalizeImageUrl(src, id);
 
   return (
     <article

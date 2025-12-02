@@ -5,6 +5,7 @@ import Loading from "../components/Loading";
 import ErrorMessage from "../components/ErrorMessage";
 import { AuthContext } from "../context/AuthContext";
 import { normalizeImageUrl } from "../components/RecipeCard";
+import { resolveFoodImageUrl, getStrictFoodFallback } from "../mocks/imageUtil";
 
 // PUBLIC_INTERFACE
 export default function RecipeDetail() {
@@ -44,7 +45,12 @@ export default function RecipeDetail() {
   if (!recipe) return <p role="status">Recipe not found.</p>;
 
   const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
-  const heroSrc = normalizeImageUrl(recipe.imageUrl, recipe.id || id);
+  let hero = resolveFoodImageUrl(recipe);
+  // Ensure cache-busting normalization remains
+  let heroSrc = normalizeImageUrl(hero, recipe.id || id);
+  if (!heroSrc) {
+    heroSrc = normalizeImageUrl(getStrictFoodFallback(1200, 675, recipe.id || id), recipe.id || id);
+  }
 
   return (
     <main className="container" role="main" style={{ padding: 16 }}>
