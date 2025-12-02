@@ -1,4 +1,4 @@
-import { MockApi, isMockEnabled as mockFlag } from "../mocks/mockApi";
+import { MockApi, isMockEnabled as mockFlag, getMockModeInfo } from "../mocks/mockApi";
 //
 // Centralized API client with JWT handling and environment-driven base URL
 //

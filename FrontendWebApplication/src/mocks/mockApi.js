@@ -105,8 +105,52 @@ export const MockApi = {
   },
 };
 
+/**
+ * INTERNAL: compute mock mode info with multiple sources so previews can enable mock mode
+ * without relying solely on build-time env.
+ */
+function computeMockMode() {
+  // Primary: CRA build-time env
+  const envEnabled = String(process.env.REACT_APP_USE_MOCK_API || "").toLowerCase() === "true";
+
+  // Secondary: query param (useful in preview links): ?mock=true
+  let queryEnabled = false;
+  try {
+    if (typeof window !== "undefined" && window.location?.search) {
+      const qs = new URLSearchParams(window.location.search);
+      queryEnabled = (qs.get("mock") || "").toLowerCase() === "true";
+    }
+  } catch {
+    // ignore
+  }
+
+  // Tertiary: localStorage override (sticky across refresh)
+  let storedEnabled = false;
+  try {
+    storedEnabled = String(localStorage.getItem("use_mock_api") || "").toLowerCase() === "true";
+  } catch {
+    // ignore storage access
+  }
+
+  const enabled = envEnabled || queryEnabled || storedEnabled;
+  const reason = enabled
+    ? envEnabled
+      ? "env:REACT_APP_USE_MOCK_API=true"
+      : queryEnabled
+        ? "query:?mock=true"
+        : "localStorage:use_mock_api=true"
+    : "disabled";
+  return { enabled, reason };
+}
+
 // PUBLIC_INTERFACE
 export function isMockEnabled() {
-  /** Return true if REACT_APP_USE_MOCK_API is enabled via env. */
-  return String(process.env.REACT_APP_USE_MOCK_API || "").toLowerCase() === "true";
+  /** Return true if mock mode is enabled via env, query (?mock=true), or localStorage override. */
+  return computeMockMode().enabled;
+}
+
+// PUBLIC_INTERFACE
+export function getMockModeInfo() {
+  /** Returns an object with { enabled: boolean, reason: string } for diagnostics and UI. */
+  return computeMockMode();
 }

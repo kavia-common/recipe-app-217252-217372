@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Api, getApiBase, isMockEnabled } from "../api/client";
+import { getMockModeInfo } from "../mocks/mockApi";
 
 // PUBLIC_INTERFACE
 export default function Diagnostics() {
@@ -85,20 +86,37 @@ export default function Diagnostics() {
     );
   }
 
+  const mockInfo = useMemo(() => {
+    try { return getMockModeInfo(); } catch { return { enabled: isMockEnabled(), reason: "unknown" }; }
+  }, []);
+
   return (
     <main className="container" role="main" style={{ padding: 16, maxWidth: 900 }}>
       <h1>Diagnostics</h1>
-      <section aria-labelledby="api-base">
+
+      <section aria-labelledby="mock-mode">
+        <h2 id="mock-mode">Mock Mode</h2>
+        <p>
+          <strong>Status:</strong> {mockInfo.enabled ? <span style={{ color: "#065f46" }}>ON</span> : <span style={{ color: "#991b1b" }}>OFF</span>}
+          {" "}· <strong>Reason:</strong> {mockInfo.reason}
+        </p>
+        {mockInfo.enabled ? (
+          <div role="note" style={{ padding: 12, background: "#fef3c7", color: "#92400e", borderRadius: 8 }}>
+            Mock mode is active. All API calls are served from in-app mocks; no real network requests are made.
+          </div>
+        ) : (
+          <p style={{ color: "#6b7280" }}>
+            To enable mock mode, set REACT_APP_USE_MOCK_API=true at build time, or add ?mock=true to the URL, or set localStorage.setItem("use_mock_api","true") in the browser console and reload.
+          </p>
+        )}
+      </section>
+
+      <section aria-labelledby="api-base" style={{ marginTop: 12 }}>
         <h2 id="api-base">Resolved API Base</h2>
         <p style={{ fontFamily: "monospace" }}>{apiBase}</p>
         <p>Environment precedence: REACT_APP_API_BASE → REACT_APP_BACKEND_URL → same-origin + "/api". Optional override: REACT_APP_API_VERSIONED_PATH (e.g., "/api/v1").</p>
       </section>
 
-      {isMockEnabled() && (
-        <div role="note" style={{ padding: 12, background: "#fef3c7", color: "#92400e", borderRadius: 8 }}>
-          Mock mode is active. All requests are served from in-app mocks; no network calls are made.
-        </div>
-      )}
       <section aria-labelledby="checks" style={{ marginTop: 16 }}>
         <h2 id="checks">Endpoint Checks</h2>
         <ul>
