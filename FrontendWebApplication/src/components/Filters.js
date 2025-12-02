@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Api } from "../api/client";
 import "./filters.css";
 
 // PUBLIC_INTERFACE
 export default function Filters({ value, onChange }) {
-  /** Filter controls for recipe list. */
+  /** Filter controls for recipe list, including unified search. */
   const [categories, setCategories] = useState([]);
-  const [local, setLocal] = useState(value || { category: "", cuisine: "", difficulty: "", sort: "" });
+  const [local, setLocal] = useState(value || { q: "", category: "", cuisine: "", difficulty: "", sort: "" });
+
+  const debounceRef = useRef(null);
 
   useEffect(() => {
     Api.getCategories()
@@ -15,17 +17,47 @@ export default function Filters({ value, onChange }) {
   }, []);
 
   useEffect(() => {
-    setLocal(value || { category: "", cuisine: "", difficulty: "", sort: "" });
+    setLocal(value || { q: "", category: "", cuisine: "", difficulty: "", sort: "" });
   }, [value]);
 
-  function updateField(field, val) {
+  function updateField(field, val, options = {}) {
     const next = { ...local, [field]: val };
     setLocal(next);
-    onChange?.(next);
+
+    // Debounce only for search q; others propagate immediately
+    if (field === "q") {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => onChange?.(next), options.debounceMs ?? 300);
+    } else {
+      onChange?.(next);
+    }
   }
 
   return (
     <form className="filters" aria-label="Recipe filters" onSubmit={(e) => e.preventDefault()}>
+      <label>
+        Search
+        <div style={{ display: "flex", gap: 6 }}>
+          <input
+            type="search"
+            value={local.q || ""}
+            onChange={(e) => updateField("q", e.target.value, { debounceMs: 300 })}
+            placeholder="Search recipes (name, ingredient, category)"
+            aria-label="Search recipes by name, ingredient, or category"
+          />
+          {local.q ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => updateField("q", "", { debounceMs: 0 })}
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+      </label>
       <label>
         Category
         <select value={local.category || ""} onChange={(e) => updateField("category", e.target.value)} aria-label="Category filter">

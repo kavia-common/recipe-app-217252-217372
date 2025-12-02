@@ -275,8 +275,11 @@ export const Api = {
   listRecipes: (params = {}, options = {}) => {
     if (mockFlag()) return MockApi.listRecipes(params);
     const qs = new URLSearchParams();
+    // Pass through all provided params including search 'q' unchanged
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") qs.append(k, v);
+      if (v !== undefined && v !== null && v !== "") {
+        qs.append(k, v);
+      }
     });
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     const { signal } = options || {};

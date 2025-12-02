@@ -12,6 +12,9 @@ export default function Diagnostics() {
     recipeById: { status: "skipped" }, // will run if we find any id from list
   });
 
+  const [testQ, setTestQ] = useState("");
+  const [lastRequestInfo, setLastRequestInfo] = useState(null); // { url, params, mocked }
+
   // Helper: toggle mock mode using localStorage override and reload
   function setMockOverride(value) {
     try {
@@ -46,14 +49,23 @@ export default function Diagnostics() {
         };
       }
 
-      // recipes via Api
+      // recipes via Api (optionally with q)
       let firstId = null;
       try {
-        const list = await Api.listRecipes();
+        const params = {};
+        if (testQ) params.q = testQ;
+        const list = await Api.listRecipes(params);
         next.recipes = { status: "ok", count: Array.isArray(list) ? list.length : 0 };
         if (Array.isArray(list) && list.length > 0) {
           firstId = list[0]?.id ?? null;
         }
+        // Build a representation of the request info
+        const qs = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => v && qs.append(k, v));
+        const mocked = isMockEnabled();
+        const base = mocked ? "(mocked)" : getApiBase();
+        const finalUrl = mocked ? `/recipes${qs.toString() ? `?${qs.toString()}` : ""}` : `${(getApiBase() || "").replace(/\/+$/, "")}/recipes${qs.toString() ? `?${qs.toString()}` : ""}`;
+        setLastRequestInfo({ url: finalUrl, params, mocked, base });
       } catch (e) {
         next.recipes = {
           status: "error",
@@ -61,6 +73,7 @@ export default function Diagnostics() {
           details: e?.payload || null,
           url: e?.url,
         };
+        setLastRequestInfo(null);
       }
 
       // /recipes/{id} only when an id was found
@@ -85,7 +98,7 @@ export default function Diagnostics() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [testQ]);
 
   function renderStatus(item) {
     if (!item) return null;
@@ -149,6 +162,44 @@ export default function Diagnostics() {
 
       <section aria-labelledby="checks" style={{ marginTop: 16 }}>
         <h2 id="checks">Endpoint Checks</h2>
+        <div style={{ marginBottom: 12 }}>
+          <form onSubmit={(e) => { e.preventDefault(); /* retrigger effect */ setResults((r) => ({ ...r, recipes: { status: "pending" }, recipeById: { status: "skipped" } })); }}>
+            <label htmlFor="diag-q">Quick test for /recipes with q</label>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                id="diag-q"
+                type="search"
+                value={testQ}
+                onChange={(e) => setTestQ(e.target.value)}
+                placeholder="e.g., chicken, Italian, dessert"
+                aria-label="Test search term for recipes endpoint"
+                style={{ maxWidth: 360 }}
+              />
+              <button className="btn" type="button" onClick={() => {
+                // re-run checks with current q
+                setResults({ health: { status: "pending" }, recipes: { status: "pending" }, recipeById: { status: "skipped" } });
+                // trigger effect by toggling local state dependency through setTestQ (already set)
+                // We rely on useEffect dependencies: adding testQ below to rerun
+              }}>
+                Run test
+              </button>
+              {testQ && (
+                <button className="btn btn-secondary" type="button" aria-label="Clear test term" onClick={() => setTestQ("")}>
+                  Clear
+                </button>
+              )}
+            </div>
+          </form>
+          {lastRequestInfo && (
+            <div style={{ marginTop: 8, fontSize: "0.9rem" }}>
+              <div><strong>Request:</strong> <code>{lastRequestInfo.url}</code></div>
+              <div><strong>Mode:</strong> {lastRequestInfo.mocked ? "mocked" : "live"} {lastRequestInfo.base ? `• base: ${lastRequestInfo.base}` : null}</div>
+              {lastRequestInfo.params && Object.keys(lastRequestInfo.params).length > 0 && (
+                <div><strong>Criteria:</strong> {Object.entries(lastRequestInfo.params).map(([k, v]) => `${k}=${v}`).join(", ")}</div>
+              )}
+            </div>
+          )}
+        </div>
         <ul>
           <li>
             GET <code>/health</code>: {renderStatus(results.health)}

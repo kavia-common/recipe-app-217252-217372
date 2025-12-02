@@ -3,7 +3,7 @@
 // Mock API implementation for no-backend preview mode.
 // This module mirrors src/api/client.js Api surface where required by the UI.
 //
-import { getMockRecipeById, getMockRecipes, mockCategories } from "./data";
+import { getMockRecipeById, getMockRecipes, mockCategories, getAllMockRecipes } from "./data";
 
 // Simulate latency to better reflect UX without network
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -92,14 +92,40 @@ export const MockApi = {
   /** Recipes */
   listRecipes: async (params = {}) => {
     await maybeDelay();
-    // Support optional pagination: page, pageSize; and filters: category, cuisine, difficulty, sort
-    const { page, pageSize, ...filters } = params || {};
-    return getMockRecipes({
-      ...filters,
-      page: page ? Number(page) : undefined,
-      pageSize: pageSize ? Number(pageSize) : undefined,
-    });
-    // Note: The UI currently applies client-side pagination; this allows future server-side style too.
+    // Support optional pagination: page, pageSize; and filters: q, category, cuisine, difficulty, sort
+    const { page, pageSize, q = "", ...filters } = params || {};
+
+    // Start with full set, apply non-q filters/sort via getMockRecipes for consistency
+    let base = getMockRecipes({ ...filters });
+
+    // Apply 'q' if present: match title, description, ingredients, category (case-insensitive)
+    const query = String(q || "").trim().toLowerCase();
+    if (query) {
+      base = base.filter((r) => {
+        const title = String(r.title || "").toLowerCase();
+        const desc = String(r.description || "").toLowerCase();
+        const cat = String(r.category || "").toLowerCase();
+        const ings = (r.ingredients || []).map((i) => String(i || "").toLowerCase());
+        return (
+          title.includes(query) ||
+          desc.includes(query) ||
+          cat.includes(query) ||
+          ings.some((i) => i.includes(query))
+        );
+      });
+    }
+
+    // Keep sort effect already applied by getMockRecipes
+    // Apply pagination last (if present)
+    let out = base;
+    if (page != null && pageSize != null && Number(page) > 0 && Number(pageSize) > 0) {
+      const p = Number(page);
+      const ps = Number(pageSize);
+      const start = (p - 1) * ps;
+      out = base.slice(start, start + ps);
+    }
+
+    return out;
   },
   getRecipe: async (id) => {
     await maybeDelay();

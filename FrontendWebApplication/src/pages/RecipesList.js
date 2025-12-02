@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Api } from "../api/client";
 import Filters from "../components/Filters";
 import RecipeGrid from "../components/RecipeGrid";
@@ -9,8 +9,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 // PUBLIC_INTERFACE
 export default function RecipesList() {
-  /** Recipe list with filters and pagination. */
-  const [params, setParams] = useState({ category: "", cuisine: "", difficulty: "", sort: "" });
+  /** Recipe list with filters, unified search, and pagination. */
+  const [params, setParams] = useState({ q: "", category: "", cuisine: "", difficulty: "", sort: "" });
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -22,22 +22,29 @@ export default function RecipesList() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
 
+  const abortRef = useRef(null);
+
   useEffect(() => {
-    // initialize from querystring
+    // initialize from querystring including 'q'
     const initial = {
+      q: searchParams.get("q") || "",
       category: searchParams.get("category") || "",
       cuisine: searchParams.get("cuisine") || "",
       difficulty: searchParams.get("difficulty") || "",
       sort: searchParams.get("sort") || "",
     };
     setParams(initial);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     setLoading(true);
     setErr(null);
+    // abort previous request if any
+    if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
+    abortRef.current = controller;
+
     Api.listRecipes(params, { signal: controller.signal })
       .then((res) => setRecipes(res || []))
       .catch((e) => {
@@ -45,10 +52,12 @@ export default function RecipesList() {
         setErr(e);
       })
       .finally(() => setLoading(false));
-    // update URL
-    const q = new URLSearchParams();
-    Object.entries(params).forEach(([k,v]) => v && q.set(k, v));
-    setSearchParams(q);
+    // update URL - include q and other filters
+    const qsp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v) qsp.set(k, v);
+    });
+    setSearchParams(qsp);
     setPage(1);
     return () => controller.abort();
   }, [params, setSearchParams]);
