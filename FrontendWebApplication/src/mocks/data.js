@@ -1,4 +1,4 @@
-import { selectFoodImageForRecipe } from "./imageUtil";
+import { selectCategoryImagePath } from "./imageUtil";
 /**
  * Representative mock datasets for recipes and categories used in mock mode.
  * Uses deterministic LOCAL food assets for reliable preview images.
@@ -674,10 +674,10 @@ const baseRecipesRaw = [
   },
 ];
 
- // Compute final image URLs using local deterministic selector for all recipes
+// Compute final image URLs using category-aware local selector for all recipes
 const baseRecipes = baseRecipesRaw.map((r, idx) => ({
   ...r,
-  imageUrl: selectFoodImageForRecipe(r, idx),
+  imageUrl: selectCategoryImagePath(r) || selectCategoryImagePath({ ...r, id: `${r.id}-${idx}` }),
 }));
 
 /**
